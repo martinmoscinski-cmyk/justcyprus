@@ -81,7 +81,7 @@ export default async function handler(req, res) {
   .replace(/No\.?\s*\d+/gi, "")
 .replace(/\(Old\s*\d+\)/gi, "")
 .replace(/Old\s*\d+/gi, "")
-.replace(/[A-Z]$/g, "")
+.replace(/([a-z])([A-Z])$/g, "$1")
 .replace(/\s+-\s+$/g, "")
 .replace(/\s{2,}/g, " ")
   .trim() || rawTitle;

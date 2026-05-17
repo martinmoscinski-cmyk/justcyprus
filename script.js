@@ -1,7 +1,6 @@
 async function fetchProjects() {
   const response = await fetch("/api/properties");
   const data = await response.json();
-  console.log("API DATA:", data);
   return data.projects || [];
 }
 
@@ -12,6 +11,18 @@ function cleanText(text) {
     .trim();
 }
 
+function marketingTitle(project) {
+  const location = cleanText(project.location || "Cyprus");
+  const type = cleanText(project.type || "").toLowerCase();
+
+  if (type.includes("villa")) return `Modern Villas in ${location}`;
+  if (type.includes("apartment")) return `Apartments in ${location}`;
+  if (type.includes("house")) return `Modern Homes in ${location}`;
+  if (type.includes("penthouse")) return `Penthouses in ${location}`;
+
+  return `Property in ${location}`;
+}
+
 function makePrice(price) {
   const value = Number(price || 0);
 
@@ -19,7 +30,7 @@ function makePrice(price) {
     return "Price on request";
   }
 
-  return "From €" + value.toLocaleString();
+  return `From €${value.toLocaleString()}`;
 }
 
 function shortDescription(text) {
@@ -64,23 +75,24 @@ document.getElementById("propertySearch").addEventListener("submit", async (e) =
   }
 
   matched.slice(0, 12).forEach((project) => {
-    const title = cleanText(project.title || "Cyprus project");
+    const title = marketingTitle(project);
+    const projectName = cleanText(project.title || "");
     const locationText = cleanText(project.location || "Cyprus");
     const ref = cleanText(project.ref || "JC-PROJECT");
+    const description = shortDescription(project.description);
+    const priceText = makePrice(project.priceFrom);
+
     const image =
       project.images?.[0] ||
       project.image ||
       "images/property-1.jpg";
 
-    const priceText = makePrice(project.priceFrom);
-    const description = shortDescription(project.description);
-
     const whatsappMessage = encodeURIComponent(
-      `Hi, I am interested in:\nRef: ${ref}\n${title}\n${locationText}\n${priceText}`
+      `Hi, I am interested in:\nRef: ${ref}\n${title}\nProject: ${projectName}\n${locationText}\n${priceText}`
     );
 
     const emailBody = encodeURIComponent(
-      `Hi,\n\nI would like more details about:\n\nRef: ${ref}\n${title}\n${locationText}\n${priceText}`
+      `Hi,\n\nI would like more details about:\n\nRef: ${ref}\n${title}\nProject: ${projectName}\n${locationText}\n${priceText}`
     );
 
     results.innerHTML += `
@@ -90,7 +102,7 @@ document.getElementById("propertySearch").addEventListener("submit", async (e) =
           Ref: ${ref}
         </div>
 
-        <img src="${image}" alt="${title}">
+        <img src="${image}" alt="${title}" loading="lazy">
 
         <div class="property-body">
 
@@ -98,13 +110,15 @@ document.getElementById("propertySearch").addEventListener("submit", async (e) =
 
           <h3>${title}</h3>
 
+          <p class="project-name">${projectName}</p>
+
           <p>${description}</p>
 
           <div class="property-meta">
 
             <div>
               <div class="price">${priceText}</div>
-              <small>${project.unitsCount || 0} units available</small>
+              <small class="units">${project.unitsCount || 0} units available</small>
             </div>
 
             <div class="card-actions">

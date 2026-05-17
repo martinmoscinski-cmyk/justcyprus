@@ -1143,3 +1143,19 @@ nav a:hover{
   }
 
 }
+.project-name{
+  color:#7b7b7b;
+  font-size:14px;
+  font-weight:800;
+  margin-bottom:16px;
+}
+
+.units{
+  display:block;
+  color:var(--orange);
+  font-size:12px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.7px;
+  margin-top:8px;
+}
