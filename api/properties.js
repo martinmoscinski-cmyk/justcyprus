@@ -366,11 +366,15 @@ console.log("DOMENICA SAMPLE:", text.slice(0, 2000));
     );
 
     res.status(200).json({
-      success: true,
-      projects,
-      totalProjects: projects.length,
-      totalUnits: allUnits.length
-    });
+  success: true,
+  projects,
+  totalProjects: projects.length,
+  totalUnits: allUnits.length,
+  debug: {
+    developers: [...new Set(projects.map(p => p.developer))],
+    domenicaProjects: projects.filter(p => p.developer === "Domenica").length
+  }
+});
   } catch (error) {
     res.status(500).json({
       success: false,
