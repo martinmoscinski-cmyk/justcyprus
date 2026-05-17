@@ -281,9 +281,6 @@ for (const source of htmlSources) {
     /([A-Z][A-Za-z0-9'’&.\s-]{2,60})\s+([A-Za-z,\s]+Pafos)\s+Area:\s*([^]*?)\s+Type:\s*([^]*?)\s+(?:Off Plan|Under Construction|For Sale|Completed)\s+Price range:\s*€\s*([\d.,]+)\s*k?/gi
   )];
 
-console.log("DOMENICA MATCHES:", matches.length);
-console.log("DOMENICA SAMPLE:", text.slice(0, 2000));
-
   matches.forEach((match, index) => {
     const title = normalizeProjectName(match[1]);
     const location = normalizeText(match[2]);
@@ -306,21 +303,18 @@ const imageMatches = [
 const filteredImages = imageMatches
   .map(match => match[1])
   .filter(src =>
-    !src.includes("logo") &&
-    !src.includes("icon") &&
-    !src.includes("svg") &&
-    !src.includes("favicon")
+    src &&
+    !src.toLowerCase().includes("logo") &&
+    !src.toLowerCase().includes("icon") &&
+    !src.toLowerCase().includes("svg") &&
+    !src.toLowerCase().includes("favicon")
   );
 
 let realImage =
   filteredImages[index] || fallbackImage;
 
-let realImage =
-  imageMatches[index]?.[1] || fallbackImage;
-
 if (realImage.startsWith("/")) {
-  realImage =
-    `https://www.domenicagroup.com${realImage}`;
+  realImage = `https://www.domenicagroup.com${realImage}`;
 }
     allUnits.push({
   unitRef: `${source.code}-PAF-PRO-${index + 1}`,
@@ -392,11 +386,7 @@ if (realImage.startsWith("/")) {
   success: true,
   projects,
   totalProjects: projects.length,
-  totalUnits: allUnits.length,
-  debug: {
-    developers: [...new Set(projects.map(p => p.developer))],
-    domenicaProjects: projects.filter(p => p.developer === "Domenica").length
-  }
+  totalUnits: allUnits.length
 });
   } catch (error) {
     res.status(500).json({
