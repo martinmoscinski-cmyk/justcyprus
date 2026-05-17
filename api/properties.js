@@ -46,6 +46,15 @@ export default async function handler(req, res) {
             : "";
         };
 
+        const cleanName = (text) => {
+          return String(text || "")
+            .replace(/&nbsp;/g, " ")
+            .replace(/\u00A0/g, " ")
+            .replace(/[–—]/g, "-")
+            .replace(/\s+/g, " ")
+            .trim();
+        };
+
         const location =
           getTag("town") ||
           getTag("city") ||
@@ -70,36 +79,30 @@ export default async function handler(req, res) {
           getTag("development") ||
           `${location} ${type}`;
 
-      const projectName = rawTitle
+        const projectName = cleanName(rawTitle)
+          .replace(/\s*-\s*Villa No\.?\s*\d+[A-Z]?/gi, "")
+          .replace(/\s*-\s*Apartment No\.?\s*\d+[A-Z]?/gi, "")
+          .replace(/\s*-\s*Unit No\.?\s*\d+[A-Z]?/gi, "")
 
-  .replace(/\s*-\s*Villa No\.?\s*\d+[A-Z]?/gi, "")
-  .replace(/\s*-\s*Apartment No\.?\s*\d+[A-Z]?/gi, "")
-  .replace(/\s*-\s*Unit No\.?\s*\d+[A-Z]?/gi, "")
+          .replace(/Villa No\.?\s*\d+[A-Z]?/gi, "")
+          .replace(/Apartment No\.?\s*\d+[A-Z]?/gi, "")
+          .replace(/Unit No\.?\s*\d+[A-Z]?/gi, "")
 
-  .replace(/Villa No\.?\s*\d+[A-Z]?/gi, "")
-  .replace(/Apartment No\.?\s*\d+[A-Z]?/gi, "")
-  .replace(/Unit No\.?\s*\d+[A-Z]?/gi, "")
+          .replace(/\(Old\s*\d+\)/gi, "")
+          .replace(/Old\s*\d+/gi, "")
 
-  .replace(/\(Old\s*\d+\)/gi, "")
-  .replace(/Old\s*\d+/gi, "")
+          .replace(/\s*-\s*V\d+/gi, "")
+.replace(/\s*-\s*[A-Z]\d+$/gi, "")
+.replace(/\s*Apartment\s*\d+[A-Z]?$/gi, "")
+.replace(/\s*Apt\.?\s*\d+[A-Z]?$/gi, "")
+.replace(/\/\d+$/g, "")
 
-  .replace(/\s*[-–—]\s*V\d+/gi, "")
+          .replace(/\s*[-–—]+\s*$/g, "")
 
-  .replace(/\/\d+$/g, "")
+          .replace(/([a-z])([A-Z])$/g, "$1")
 
-  // NORMALIZACJA DASHY
-  .replace(/[–—]/g, "-")
-
-  // usuwa końcowe minusy
-  .replace(/\s*-\s*$/g, "")
-
-  // usuwa końcowe litery typu VillasA
-  .replace(/([a-z])([A-Z])$/g, "$1")
-
-  // usuwa podwójne spacje
-  .replace(/\s{2,}/g, " ")
-
-  .trim();
+          .replace(/\s{2,}/g, " ")
+          .trim();
 
         const priceText =
           getTag("Price") ||
@@ -115,9 +118,9 @@ export default async function handler(req, res) {
 
         let price = Number(cleanPrice) || 0;
 
-if (price < 50000 || price > 10000000) {
-  price = 0;
-}
+        if (price < 50000 || price > 10000000) {
+          price = 0;
+        }
 
         const rawImage =
           getTag("image") ||
@@ -142,6 +145,20 @@ if (price < 50000 || price > 10000000) {
 
           if (imageMatch && imageMatch[1]) {
             image = imageMatch[1].trim();
+
+            if (image.startsWith("//")) {
+              image = `https:${image}`;
+            }
+          }
+        }
+
+        if (!image) {
+          const urlMatch = item.match(
+            /<url[^>]*>([\s\S]*?)<\/url>/i
+          );
+
+          if (urlMatch && urlMatch[1]) {
+            image = urlMatch[1].trim();
 
             if (image.startsWith("//")) {
               image = `https:${image}`;
@@ -192,23 +209,25 @@ if (price < 50000 || price > 10000000) {
 
     allUnits.forEach((unit) => {
 
+      const keyProjectName = cleanProjectName(unit.projectName);
+
       const key =
-  `${unit.developer}-${unit.projectName}-${unit.location}`
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-");
+        `${unit.developer}-${keyProjectName}-${unit.location}`
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-");
 
       if (!grouped[key]) {
 
         grouped[key] = {
           projectId: key,
           ref: `${unit.unitRef.split("-").slice(0,3).join("-")}-PROJECT`,
-          title: unit.projectName,
+          title: keyProjectName,
           location: unit.location,
           type: unit.type,
           priceFrom: unit.price || 0,
           image: unit.image,
           images: [],
-          description: `${unit.projectName} is a selected development in ${unit.location}, with ${unit.type.toLowerCase()} options available. Contact us for current availability, layouts and details.`,
+          description: `${keyProjectName} is a selected development in ${unit.location}, with ${unit.type.toLowerCase()} options available. Contact us for current availability, layouts and details.`,
           unitsCount: 0,
           units: [],
           developer: unit.developer,
@@ -237,6 +256,16 @@ if (price < 50000 || price > 10000000) {
       });
 
     });
+
+    function cleanProjectName(text) {
+      return String(text || "")
+        .replace(/&nbsp;/g, " ")
+        .replace(/\u00A0/g, " ")
+        .replace(/[–—]/g, "-")
+        .replace(/\s*-\s*$/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
 
     const projects = Object.values(grouped);
 

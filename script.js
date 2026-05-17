@@ -7,6 +7,10 @@ async function fetchProjects() {
 function cleanText(text) {
   return String(text || "")
     .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\u00A0/g, " ")
+    .replace(/[–—]/g, "-")
+    .replace(/\s*-\s*$/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -25,7 +29,7 @@ function shortDescription(text) {
   const cleaned = cleanText(text);
 
   if (!cleaned) {
-    return "Selected new-build project in Cyprus with direct developer opportunities.";
+    return "Selected development in Cyprus. Contact us for current availability, layouts and details.";
   }
 
   return cleaned.length > 170
@@ -64,7 +68,6 @@ document.getElementById("propertySearch").addEventListener("submit", async (e) =
 
   matched.slice(0, 12).forEach((project) => {
     const title = cleanText(project.title || "Cyprus property");
-    const projectName = cleanText(project.title || "");
     const locationText = cleanText(project.location || "Cyprus");
     const ref = cleanText(project.ref || "JC-PROJECT");
     const description = shortDescription(project.description);
@@ -76,11 +79,11 @@ document.getElementById("propertySearch").addEventListener("submit", async (e) =
       "images/property-1.jpg";
 
     const whatsappMessage = encodeURIComponent(
-      `Hi, I am interested in:\nRef: ${ref}\n${title}\nProject: ${projectName}\n${locationText}\n${priceText}`
+      `Hi, I am interested in:\nRef: ${ref}\n${title}\n${locationText}\n${priceText}`
     );
 
     const emailBody = encodeURIComponent(
-      `Hi,\n\nI would like more details about:\n\nRef: ${ref}\n${title}\nProject: ${projectName}\n${locationText}\n${priceText}`
+      `Hi,\n\nI would like more details about:\n\nRef: ${ref}\n${title}\n${locationText}\n${priceText}`
     );
 
     results.innerHTML += `
