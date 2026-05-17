@@ -93,6 +93,7 @@ export default async function handler(req, res) {
 
   // usuwa końcowe pojedyncze litery np VillasA
   .replace(/([a-z])([A-Z])$/g, "$1")
+.replace(/\s*[-–—]+\s*$/g, "")
 
   .replace(/\s{2,}/g, " ")
   .trim();
@@ -204,7 +205,7 @@ if (price < 50000 || price > 10000000) {
           priceFrom: unit.price || 0,
           image: unit.image,
           images: [],
-          description: unit.description,
+          description: `${unit.projectName} is a selected development in ${unit.location}, with ${unit.type.toLowerCase()} options available. Contact us for current availability, layouts and details.`,
           unitsCount: 0,
           units: [],
           developer: unit.developer,
