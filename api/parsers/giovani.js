@@ -48,6 +48,8 @@ const extractTitle = (html, text) => {
   return normalizeProjectName(
     normalizeText(h1)
       .replace(/Available/i, "")
+      .replace(/\s+(APARTMENT|VILLA|HOUSE|UNIT)\s*\d+[A-Z]?$/i, "")
+      .replace(/\s+\d+[A-Z]?$/i, "")
       .replace(/\s+/g, " ")
   );
 };
