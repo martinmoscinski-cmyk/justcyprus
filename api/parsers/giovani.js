@@ -18,9 +18,18 @@ const cleanTitle = (text) => {
     .trim();
 };
 
-const getCityFromDetail = (text) => {
-  const cityMatch = text.match(/City:\s*([A-Za-z\s-]+)\s+(?:Zip:|Country:|Address:)/i);
-  return cityMatch ? normalizeText(cityMatch[1]) : "";
+const detectLocation = (text) => {
+  const value = String(text || "").toLowerCase();
+
+  if (value.includes("paralimni")) return "Paralimni";
+  if (value.includes("protaras")) return "Protaras";
+  if (value.includes("pernera")) return "Pernera";
+  if (value.includes("kapparis")) return "Kapparis";
+  if (value.includes("ayia napa") || value.includes("agia napa")) return "Ayia Napa";
+  if (value.includes("cape greco")) return "Cape Greco";
+  if (value.includes("larnaca")) return "Larnaca";
+
+  return "";
 };
 
 export async function getGiovaniProjects() {
@@ -32,23 +41,28 @@ export async function getGiovaniProjects() {
 
   const html = await response.text();
 
-  const linkMatches = [
-    ...html.matchAll(/href=["']([^"']*\/property\/[^"']*)["']/gi)
+  const cardMatches = [
+    ...html.matchAll(
+      /€\s*([\d,]+)\s*\+?\s*VAT[\s\S]*?<a[^>]+href=["']([^"']+)["'][^>]*>\s*([^<]*?)\s*<\/a>[\s\S]*?<a[^>]+href=["']([^"']+)["'][^>]*>\s*details\s*<\/a>/gi
+    )
   ];
-
-  const links = [...new Set(
-    linkMatches
-      .map((match) => absoluteUrl(match[1]))
-      .filter(Boolean)
-  )].slice(0, 30);
 
   const units = [];
 
-  for (let index = 0; index < links.length; index++) {
-    const link = links[index];
+  for (let index = 0; index < cardMatches.length; index++) {
+    const match = cardMatches[index];
+
+    const price =
+      Number(String(match[1]).replace(/,/g, "")) || 0;
+
+    if (price < 50000 || price > 10000000) continue;
+
+    const detailUrl = absoluteUrl(match[4] || match[2]);
+    const rawTitle = normalizeText(match[3]);
+    const title = cleanTitle(rawTitle) || "Giovani Property";
 
     try {
-      const detailResponse = await fetch(link, {
+      const detailResponse = await fetch(detailUrl, {
         headers: {
           "User-Agent": "Mozilla/5.0"
         }
@@ -63,26 +77,23 @@ export async function getGiovaniProjects() {
           .replace(/<[^>]*>/g, " ")
       );
 
-      const titleMatch = detailText.match(/#\s*([A-Z0-9][A-Za-z0-9\s.'’&-]{3,100})\s+Available/i);
-      const priceMatch = detailText.match(/Price:\s*€\s*([\d,]+)/i);
-      const typeMatch = detailText.match(/Home\s+2\.\s*([A-Za-z]+)/i);
-      const sizeMatch = detailText.match(/Property Size:\s*([\d.,]+)\s*m/i);
+      let location = "";
 
-      const title =
-        cleanTitle(titleMatch?.[1] || "Giovani Property");
+      const cityMatch = detailText.match(/City:\s*([A-Za-z\s-]+)\s+(?:Zip:|Country:|Address:|Property)/i);
 
-      const price =
-        Number(String(priceMatch?.[1] || "").replace(/,/g, "")) || 0;
+      if (cityMatch?.[1]) {
+        location = normalizeText(cityMatch[1]);
+      }
 
-      if (price < 50000 || price > 10000000) continue;
-
-      const location = getCityFromDetail(detailText);
+      if (!location) {
+        location = detectLocation(detailText) || detectLocation(detailUrl);
+      }
 
       if (!location) continue;
 
-      let type = typeMatch?.[1] || "Property";
-
       const lower = `${title} ${detailText}`.toLowerCase();
+
+      let type = "Property";
 
       if (lower.includes("apartment")) type = "Apartment";
       if (lower.includes("villa")) type = "Villa";
@@ -93,7 +104,11 @@ export async function getGiovaniProjects() {
 
       const imageMatch = detailHtml.match(/<img[^>]+src=["']([^"']+)["']/i);
 
-      if (imageMatch?.[1]) {
+      if (
+        imageMatch?.[1] &&
+        !imageMatch[1].toLowerCase().includes("logo") &&
+        !imageMatch[1].toLowerCase().includes("svg")
+      ) {
         image = absoluteUrl(imageMatch[1]);
       }
 
@@ -109,7 +124,7 @@ export async function getGiovaniProjects() {
         description: `${title} is a selected Giovani development in ${location}. Contact us for current availability, layouts and details.`,
         bedrooms: "",
         developer: "Giovani",
-        source: link
+        source: detailUrl
       });
 
     } catch (error) {
