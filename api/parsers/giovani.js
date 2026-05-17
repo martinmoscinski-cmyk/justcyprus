@@ -7,10 +7,24 @@ import {
 const cleanGiovaniTitle = (text) => {
   return normalizeProjectName(text)
     .replace(/\s*\.\.\..*$/g, "")
-    .replace(/\s+(Comprising|Are you|consists|located|with|is a).*$/i, "")
+    .replace(/\s+(Comprising|Are you|consists|located|with|is a|offering).*$/i, "")
     .replace(/\s+[A-Z]?\d{2,4}$/i, "")
     .replace(/\s+/g, " ")
     .trim();
+};
+
+const detectLocationFromText = (text) => {
+  const value = String(text || "").toLowerCase();
+
+  if (value.includes("paralimni")) return "Paralimni";
+  if (value.includes("protaras")) return "Protaras";
+  if (value.includes("pernera")) return "Pernera";
+  if (value.includes("kapparis")) return "Kapparis";
+  if (value.includes("ayia-napa") || value.includes("ayia napa") || value.includes("agia-napa") || value.includes("agia napa")) return "Ayia Napa";
+  if (value.includes("cape-greco") || value.includes("cape greco")) return "Cape Greco";
+  if (value.includes("larnaca")) return "Larnaca";
+
+  return "";
 };
 
 export async function getGiovaniProjects() {
@@ -29,6 +43,10 @@ export async function getGiovaniProjects() {
       .replace(/<[^>]*>/g, " ")
   );
 
+  const propertyLinks = [
+    ...html.matchAll(/href=["']([^"']*estate_property[^"']*)["']/gi)
+  ].map((match) => match[1]);
+
   const matches = [
     ...text.matchAll(
       /€\s*([\d,]+)\s*\+?\s*VAT?\s+([A-Z0-9][A-Za-z0-9\s.'’&-]{3,100})\s+([^€]{20,300}?)(?=(?:€\s*[\d,]+\s*\+?\s*VAT?)|Agent:|About|Contact|$)/gi
@@ -46,54 +64,39 @@ export async function getGiovaniProjects() {
     const rawTitle = normalizeText(match[2]);
     const rawText = normalizeText(match[3]);
 
-    const combined =
-      `${rawTitle} ${rawText}`.toLowerCase();
-
     const title =
       cleanGiovaniTitle(rawTitle) || "Giovani Property";
 
+    const link = propertyLinks[index] || "";
+    const combined = `${title} ${rawTitle} ${rawText} ${link}`;
+
+    const location =
+      detectLocationFromText(link) ||
+      detectLocationFromText(combined);
+
+    if (!location) return;
+
     let type = "Property";
 
-    if (combined.includes("apartment")) {
+    const lowerCombined = combined.toLowerCase();
+
+    if (lowerCombined.includes("apartment")) {
       type = "Apartment";
     }
 
-    if (combined.includes("villa")) {
+    if (lowerCombined.includes("villa")) {
       type = "Villa";
     }
 
     if (
-      combined.includes("townhouse") ||
-      combined.includes("town house")
+      lowerCombined.includes("townhouse") ||
+      lowerCombined.includes("town house")
     ) {
       type = "Townhouse";
     }
 
-    if (combined.includes("maisonette")) {
+    if (lowerCombined.includes("maisonette")) {
       type = "Maisonette";
-    }
-
-    let location = "";
-
-    if (combined.includes("paralimni")) {
-      location = "Paralimni";
-    } else if (combined.includes("protaras")) {
-      location = "Protaras";
-    } else if (combined.includes("pernera")) {
-      location = "Pernera";
-    } else if (combined.includes("kapparis")) {
-      location = "Kapparis";
-    } else if (
-      combined.includes("ayia napa") ||
-      combined.includes("agia napa")
-    ) {
-      location = "Ayia Napa";
-    } else if (combined.includes("cape greco")) {
-      location = "Cape Greco";
-    } else if (combined.includes("larnaca")) {
-      location = "Larnaca";
-    } else {
-      return;
     }
 
     units.push({
@@ -108,7 +111,7 @@ export async function getGiovaniProjects() {
       description: `${title} is a selected Giovani development in ${location}. Contact us for current availability, layouts and details.`,
       bedrooms: "",
       developer: "Giovani",
-      source: "https://giovani.cy/properties/"
+      source: link || "https://giovani.cy/properties/"
     });
   });
 
