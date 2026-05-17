@@ -79,8 +79,11 @@ export default async function handler(req, res) {
   .replace(/Apartment No\.?\s*\d+/gi, "")
   .replace(/Unit No\.?\s*\d+/gi, "")
   .replace(/No\.?\s*\d+/gi, "")
-  .replace(/\s+-\s+$/g, "")
-  .replace(/\s{2,}/g, " ")
+.replace(/\(Old\s*\d+\)/gi, "")
+.replace(/Old\s*\d+/gi, "")
+.replace(/[A-Z]$/g, "")
+.replace(/\s+-\s+$/g, "")
+.replace(/\s{2,}/g, " ")
   .trim() || rawTitle;
 
         const priceText =
