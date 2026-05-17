@@ -1,5 +1,4 @@
 export default async function handler(req, res) {
-
   const feeds = [
     {
       developer: "Aristo",
@@ -13,12 +12,46 @@ export default async function handler(req, res) {
     }
   ];
 
-  try {
+  const normalizeText = (text) => {
+    return String(text || "")
+      .normalize("NFKC")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&#xA0;/g, " ")
+      .replace(/\u00A0/g, " ")
+      .replace(/&#8211;/g, "-")
+      .replace(/&#8212;/g, "-")
+      .replace(/&ndash;/g, "-")
+      .replace(/&mdash;/g, "-")
+      .replace(/[\u2010-\u2015\u2212]/g, "-")
+      .replace(/\s+/g, " ")
+      .trim();
+  };
 
+  const normalizeProjectName = (text) => {
+    return normalizeText(text)
+      .replace(/\s*-\s*Villa No\.?\s*\d+[A-Z]?/gi, "")
+      .replace(/\s*-\s*Apartment No\.?\s*\d+[A-Z]?/gi, "")
+      .replace(/\s*-\s*Unit No\.?\s*\d+[A-Z]?/gi, "")
+      .replace(/Villa No\.?\s*\d+[A-Z]?/gi, "")
+      .replace(/Apartment No\.?\s*\d+[A-Z]?/gi, "")
+      .replace(/Unit No\.?\s*\d+[A-Z]?/gi, "")
+      .replace(/\(Old\s*\d+\)/gi, "")
+      .replace(/Old\s*\d+/gi, "")
+      .replace(/\s*-\s*V\d+$/gi, "")
+      .replace(/\s*-\s*[A-Z]\d+$/gi, "")
+      .replace(/\s*Apartment\s*\d+[A-Z]?$/gi, "")
+      .replace(/\s*Apt\.?\s*\d+[A-Z]?$/gi, "")
+      .replace(/\/\d+$/g, "")
+      .replace(/([a-z])([A-Z])$/g, "$1")
+      .replace(/[^\w\s)]$/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  };
+
+  try {
     const allUnits = [];
 
     for (const feed of feeds) {
-
       const response = await fetch(feed.url, {
         headers: {
           "User-Agent": "Mozilla/5.0"
@@ -33,26 +66,16 @@ export default async function handler(req, res) {
         [];
 
       items.forEach((item, index) => {
-
         const getTag = (tag) => {
           const match = item.match(
             new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i")
           );
 
           return match
-            ? match[1]
-                .replace(/<!\[CDATA\[|\]\]>/g, "")
-                .trim()
+            ? normalizeText(
+                match[1].replace(/<!\[CDATA\[|\]\]>/g, "")
+              )
             : "";
-        };
-
-        const cleanName = (text) => {
-          return String(text || "")
-            .replace(/&nbsp;/g, " ")
-            .replace(/\u00A0/g, " ")
-            .replace(/[–—]/g, "-")
-            .replace(/\s+/g, " ")
-            .trim();
         };
 
         const location =
@@ -79,29 +102,7 @@ export default async function handler(req, res) {
           getTag("development") ||
           `${location} ${type}`;
 
-   const projectName = cleanName(rawTitle)
-  .replace(/\s*[-–—]\s*Villa No\.?\s*\d+[A-Z]?/gi, "")
-  .replace(/\s*[-–—]\s*Apartment No\.?\s*\d+[A-Z]?/gi, "")
-  .replace(/\s*[-–—]\s*Unit No\.?\s*\d+[A-Z]?/gi, "")
-
-  .replace(/Villa No\.?\s*\d+[A-Z]?/gi, "")
-  .replace(/Apartment No\.?\s*\d+[A-Z]?/gi, "")
-  .replace(/Unit No\.?\s*\d+[A-Z]?/gi, "")
-
-  .replace(/\(Old\s*\d+\)/gi, "")
-  .replace(/Old\s*\d+/gi, "")
-
-  .replace(/\s*[-–—]\s*V\d+/gi, "")
-  .replace(/\s*[-–—]\s*[A-Z]\d+$/gi, "")
-  .replace(/\s*Apartment\s*\d+[A-Z]?$/gi, "")
-  .replace(/\s*Apt\.?\s*\d+[A-Z]?$/gi, "")
-  .replace(/\/\d+$/g, "")
-
-  .replace(/([a-z])([A-Z])$/g, "$1")
-
-  .replace(/\s*[-–—]+\s*$/g, "")
-  .replace(/\s{2,}/g, " ")
-  .trim();
+        const projectName = normalizeProjectName(rawTitle);
 
         const priceText =
           getTag("Price") ||
@@ -143,7 +144,7 @@ export default async function handler(req, res) {
           );
 
           if (imageMatch && imageMatch[1]) {
-            image = imageMatch[1].trim();
+            image = normalizeText(imageMatch[1]);
 
             if (image.startsWith("//")) {
               image = `https:${image}`;
@@ -157,7 +158,7 @@ export default async function handler(req, res) {
           );
 
           if (urlMatch && urlMatch[1]) {
-            image = urlMatch[1].trim();
+            image = normalizeText(urlMatch[1]);
 
             if (image.startsWith("//")) {
               image = `https:${image}`;
@@ -183,7 +184,7 @@ export default async function handler(req, res) {
           "";
 
         const unitRef =
-          `${feed.code}-${location.slice(0,3).toUpperCase()}-${type.slice(0,3).toUpperCase()}-${index + 1}`;
+          `${feed.code}-${location.slice(0, 3).toUpperCase()}-${type.slice(0, 3).toUpperCase()}-${index + 1}`;
 
         allUnits.push({
           unitRef,
@@ -199,16 +200,13 @@ export default async function handler(req, res) {
           developer: feed.developer,
           source: feed.url
         });
-
       });
-
     }
 
     const grouped = {};
 
     allUnits.forEach((unit) => {
-
-      const keyProjectName = cleanProjectName(unit.projectName);
+      const keyProjectName = normalizeProjectName(unit.projectName);
 
       const key =
         `${unit.developer}-${keyProjectName}-${unit.location}`
@@ -216,10 +214,9 @@ export default async function handler(req, res) {
           .replace(/[^a-z0-9]+/g, "-");
 
       if (!grouped[key]) {
-
         grouped[key] = {
           projectId: key,
-          ref: `${unit.unitRef.split("-").slice(0,3).join("-")}-PROJECT`,
+          ref: `${unit.unitRef.split("-").slice(0, 3).join("-")}-PROJECT`,
           title: keyProjectName,
           location: unit.location,
           type: unit.type,
@@ -232,7 +229,6 @@ export default async function handler(req, res) {
           developer: unit.developer,
           source: unit.source
         };
-
       }
 
       grouped[key].units.push(unit);
@@ -240,10 +236,7 @@ export default async function handler(req, res) {
 
       if (
         unit.price &&
-        (
-          !grouped[key].priceFrom ||
-          unit.price < grouped[key].priceFrom
-        )
+        (!grouped[key].priceFrom || unit.price < grouped[key].priceFrom)
       ) {
         grouped[key].priceFrom = unit.price;
       }
@@ -253,18 +246,7 @@ export default async function handler(req, res) {
           grouped[key].images.push(img);
         }
       });
-
     });
-
-    function cleanProjectName(text) {
-      return String(text || "")
-        .replace(/&nbsp;/g, " ")
-        .replace(/\u00A0/g, " ")
-        .replace(/[–—]/g, "-")
-        .replace(/\s*-\s*$/g, "")
-        .replace(/\s+/g, " ")
-        .trim();
-    }
 
     const projects = Object.values(grouped);
 
@@ -274,14 +256,10 @@ export default async function handler(req, res) {
       totalProjects: projects.length,
       totalUnits: allUnits.length
     });
-
   } catch (error) {
-
     res.status(500).json({
       success: false,
       error: error.message
     });
-
   }
-
 }
