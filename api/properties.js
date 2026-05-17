@@ -2,6 +2,7 @@ import { getAristoProjects } from "./parsers/aristo.js";
 import { getPafiliaProjects } from "./parsers/pafilia.js";
 import { getDomenicaProjects } from "./parsers/domenica.js";
 import { normalizeProjectName } from "./parsers/helpers.js";
+import { getGiovaniProjects } from "./parsers/giovani.js";
 
 export const config = {
   runtime: "nodejs"
@@ -10,10 +11,11 @@ export const config = {
 export default async function handler(req, res) {
   try {
     const allUnits = [
-      ...(await getAristoProjects()),
-      ...(await getPafiliaProjects()),
-      ...(await getDomenicaProjects())
-    ];
+  ...(await getAristoProjects()),
+  ...(await getPafiliaProjects()),
+  ...(await getDomenicaProjects()),
+  ...(await getGiovaniProjects())
+];
 
     const grouped = {};
 
