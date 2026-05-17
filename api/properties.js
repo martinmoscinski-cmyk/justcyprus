@@ -44,22 +44,6 @@ export default async function handler(req, res) {
             : "";
         };
 
-        const rawTitle =
-          getTag("title") ||
-          getTag("name") ||
-          getTag("project") ||
-          getTag("development") ||
-          getTag("property_type") ||
-          "Cyprus Project";
-
-        const projectName = rawTitle
-          .replace(/Villa No\.?\s*\d+/gi, "")
-          .replace(/Apartment No\.?\s*\d+/gi, "")
-          .replace(/Unit No\.?\s*\d+/gi, "")
-          .replace(/No\.?\s*\d+/gi, "")
-          .replace(/\s+-\s+$/g, "")
-          .trim() || rawTitle;
-
         const location =
           getTag("town") ||
           getTag("city") ||
@@ -72,25 +56,47 @@ export default async function handler(req, res) {
           getTag("type") ||
           "Property";
 
-        const rawPrice =
-  getTag("price")
-    .replace(/[^\d]/g,"");
+        const rawTitle =
+          getTag("title") ||
+          getTag("project_name") ||
+          getTag("name") ||
+          getTag("project") ||
+          getTag("development") ||
+          `${location} ${type}`;
 
-const price =
-  Number(rawPrice) || 0;
+        const projectName = rawTitle
+          .replace(/Villa No\.?\s*\d+/gi, "")
+          .replace(/Apartment No\.?\s*\d+/gi, "")
+          .replace(/Unit No\.?\s*\d+/gi, "")
+          .replace(/No\.?\s*\d+/gi, "")
+          .replace(/\s+-\s+$/g, "")
+          .trim() || rawTitle;
+
+        const rawPrice =
+          getTag("price")
+            .replace(/€/g, "")
+            .replace(/,/g, "")
+            .replace(/\s/g, "");
+
+        let price =
+          Number(rawPrice) || 0;
+
+        if (price > 10000000) {
+          price = Math.round(price / 100);
+        }
 
         const rawImage =
-  getTag("image") ||
-  getTag("image_url") ||
-  getTag("IMAGE_URL") ||
-  getTag("picture") ||
-  "";
+          getTag("image") ||
+          getTag("image_url") ||
+          getTag("IMAGE_URL") ||
+          getTag("picture") ||
+          "";
 
-const image = rawImage
-  .replace(/"/g, "")
-  .replace(/<[^>]*>/g, "")
-  .trim() ||
-  "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1200&auto=format&fit=crop";
+        const image = rawImage
+          .replace(/"/g, "")
+          .replace(/<[^>]*>/g, "")
+          .trim() ||
+          "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1200&auto=format&fit=crop";
 
         const description =
           getTag("description") ||
@@ -128,6 +134,7 @@ const image = rawImage
     const grouped = {};
 
     allUnits.forEach((unit) => {
+
       const key =
         `${unit.developer}-${unit.projectName}-${unit.location}-${unit.type}`
           .toLowerCase()
@@ -154,7 +161,10 @@ const image = rawImage
       grouped[key].units.push(unit);
       grouped[key].unitsCount += 1;
 
-      if (unit.price && (!grouped[key].priceFrom || unit.price < grouped[key].priceFrom)) {
+      if (
+        unit.price &&
+        (!grouped[key].priceFrom || unit.price < grouped[key].priceFrom)
+      ) {
         grouped[key].priceFrom = unit.price;
       }
 
@@ -163,6 +173,7 @@ const image = rawImage
           grouped[key].images.push(img);
         }
       });
+
     });
 
     const projects = Object.values(grouped);
