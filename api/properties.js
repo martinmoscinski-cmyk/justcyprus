@@ -303,6 +303,18 @@ const imageMatches = [
   ...html.matchAll(/<img[^>]+src="([^"]+)"/gi)
 ];
 
+const filteredImages = imageMatches
+  .map(match => match[1])
+  .filter(src =>
+    !src.includes("logo") &&
+    !src.includes("icon") &&
+    !src.includes("svg") &&
+    !src.includes("favicon")
+  );
+
+let realImage =
+  filteredImages[index] || fallbackImage;
+
 let realImage =
   imageMatches[index]?.[1] || fallbackImage;
 
