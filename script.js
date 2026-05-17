@@ -5,6 +5,35 @@ async function fetchProjects() {
   return data.projects || [];
 }
 
+function cleanText(text) {
+  return String(text || "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function makePrice(price) {
+  const value = Number(price || 0);
+
+  if (!value) {
+    return "Price on request";
+  }
+
+  return "From €" + value.toLocaleString();
+}
+
+function shortDescription(text) {
+  const cleaned = cleanText(text);
+
+  if (!cleaned) {
+    return "Selected new-build project in Cyprus with direct developer opportunities.";
+  }
+
+  return cleaned.length > 170
+    ? cleaned.slice(0, 170) + "..."
+    : cleaned;
+}
+
 document.getElementById("propertySearch").addEventListener("submit", async (e) => {
   e.preventDefault();
 
@@ -18,8 +47,8 @@ document.getElementById("propertySearch").addEventListener("submit", async (e) =
   results.innerHTML = "";
 
   const matched = projects.filter((project) => {
-    const projectLocation = String(project.location || "").toLowerCase();
-    const projectType = String(project.type || "").toLowerCase();
+    const projectLocation = cleanText(project.location).toLowerCase();
+    const projectType = cleanText(project.type).toLowerCase();
     const projectPrice = Number(project.priceFrom || 0);
 
     const locationMatch = !location || projectLocation.includes(location);
@@ -35,50 +64,48 @@ document.getElementById("propertySearch").addEventListener("submit", async (e) =
   }
 
   matched.slice(0, 12).forEach((project) => {
-    const mainImage =
+    const title = cleanText(project.title || "Cyprus project");
+    const locationText = cleanText(project.location || "Cyprus");
+    const ref = cleanText(project.ref || "JC-PROJECT");
+    const image =
       project.images?.[0] ||
       project.image ||
       "images/property-1.jpg";
 
-    const priceText =
-      project.priceFrom
-        ? "From €" + Number(project.priceFrom).toLocaleString()
-        : "Price available on request";
+    const priceText = makePrice(project.priceFrom);
+    const description = shortDescription(project.description);
 
     const whatsappMessage = encodeURIComponent(
-      `Hi, I am interested in:\nRef: ${project.ref}\n${project.title}\n${project.location}\n${priceText}`
+      `Hi, I am interested in:\nRef: ${ref}\n${title}\n${locationText}\n${priceText}`
     );
 
     const emailBody = encodeURIComponent(
-      `Hi,\n\nI would like more details about:\n\nRef: ${project.ref}\n${project.title}\n${project.location}\n${priceText}`
+      `Hi,\n\nI would like more details about:\n\nRef: ${ref}\n${title}\n${locationText}\n${priceText}`
     );
 
     results.innerHTML += `
       <div class="property-card">
 
         <div class="property-badge">
-          Ref: ${project.ref}
+          Ref: ${ref}
         </div>
 
-        <img src="${mainImage}" alt="${project.title}">
+        <img src="${image}" alt="${title}">
 
         <div class="property-body">
 
-          <small>${project.location}</small>
+          <small>${locationText}</small>
 
-          <h3>${project.title}</h3>
+          <h3>${title}</h3>
 
-          <p>${project.description || "Selected new-build project in Cyprus."}</p>
+          <p>${description}</p>
 
           <div class="property-meta">
 
-            <div class="price">
-              ${priceText}
+            <div>
+              <div class="price">${priceText}</div>
+              <small>${project.unitsCount || 0} units available</small>
             </div>
-
-            <small>
-              ${project.unitsCount || 0} units available
-            </small>
 
             <div class="card-actions">
 
@@ -90,7 +117,7 @@ document.getElementById("propertySearch").addEventListener("submit", async (e) =
               </a>
 
               <a
-                href="mailto:marcin@nglobalinvestments.com?subject=Property enquiry ${project.ref}&body=${emailBody}"
+                href="mailto:marcin@nglobalinvestments.com?subject=Property enquiry ${ref}&body=${emailBody}"
                 class="card-btn secondary-card-btn"
               >
                 Request details
