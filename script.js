@@ -1,123 +1,100 @@
 async function fetchProjects() {
-
   const response = await fetch("/api/properties");
-
   const data = await response.json();
-
+  console.log("API DATA:", data);
   return data.projects || [];
-
 }
 
-document
-  .getElementById("propertySearch")
-  .addEventListener("submit", async (e) => {
+document.getElementById("propertySearch").addEventListener("submit", async (e) => {
+  e.preventDefault();
 
-    e.preventDefault();
+  const location = document.getElementById("location").value.toLowerCase();
+  const type = document.getElementById("type").value.toLowerCase();
+  const budget = Number(document.getElementById("budget").value);
 
-    const location =
-      document.getElementById("location").value.toLowerCase();
+  const projects = await fetchProjects();
+  const results = document.getElementById("results");
 
-    const type =
-      document.getElementById("type").value.toLowerCase();
+  results.innerHTML = "";
 
-    const budget =
-      Number(document.getElementById("budget").value);
+  const matched = projects.filter((project) => {
+    const projectLocation = String(project.location || "").toLowerCase();
+    const projectType = String(project.type || "").toLowerCase();
+    const projectPrice = Number(project.priceFrom || 0);
 
-    const projects = await fetchProjects();
+    const locationMatch = !location || projectLocation.includes(location);
+    const typeMatch = !type || projectType.includes(type);
+    const budgetMatch = !budget || !projectPrice || projectPrice <= budget;
 
-    const results =
-      document.getElementById("results");
+    return locationMatch && typeMatch && budgetMatch;
+  });
 
-    results.innerHTML = "";
+  if (matched.length === 0) {
+    results.innerHTML = `<p>No matching projects found.</p>`;
+    return;
+  }
 
-    const matched = projects.filter((project) => {
+  matched.slice(0, 12).forEach((project) => {
+    const mainImage =
+      project.images?.[0] ||
+      project.image ||
+      "images/property-1.jpg";
 
-      const locationMatch =
-        !location ||
-        project.location.toLowerCase().includes(location);
+    const priceText =
+      project.priceFrom
+        ? "From €" + Number(project.priceFrom).toLocaleString()
+        : "Price available on request";
 
-      const typeMatch =
-        !type ||
-        project.type.toLowerCase().includes(type);
+    const whatsappMessage = encodeURIComponent(
+      `Hi, I am interested in:\nRef: ${project.ref}\n${project.title}\n${project.location}\n${priceText}`
+    );
 
-      const budgetMatch =
-        !budget ||
-        project.minPrice <= budget;
+    const emailBody = encodeURIComponent(
+      `Hi,\n\nI would like more details about:\n\nRef: ${project.ref}\n${project.title}\n${project.location}\n${priceText}`
+    );
 
-      return (
-        locationMatch &&
-        typeMatch &&
-        budgetMatch
-      );
+    results.innerHTML += `
+      <div class="property-card">
 
-    });
+        <div class="property-badge">
+          Ref: ${project.ref}
+        </div>
 
-    if (matched.length === 0) {
+        <img src="${mainImage}" alt="${project.title}">
 
-      results.innerHTML = `
-        <p>No matching properties found.</p>
-      `;
+        <div class="property-body">
 
-      return;
+          <small>${project.location}</small>
 
-    }
+          <h3>${project.title}</h3>
 
-    matched.slice(0, 12).forEach((project) => {
+          <p>${project.description || "Selected new-build project in Cyprus."}</p>
 
-      const whatsappMessage = encodeURIComponent(
-        `Hi, I am interested in project:\n${project.title}\n${project.location}\nRef: ${project.ref}`
-      );
+          <div class="property-meta">
 
-      const mainImage =
-        project.images?.[0] ||
-        "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1200&auto=format&fit=crop";
+            <div class="price">
+              ${priceText}
+            </div>
 
-      results.innerHTML += `
+            <small>
+              ${project.unitsCount || 0} units available
+            </small>
 
-        <div class="property-card">
+            <div class="card-actions">
 
-          <img src="${mainImage}" alt="${project.title}">
+              <a
+                href="https://wa.me/447459899618?text=${whatsappMessage}"
+                class="card-btn"
+              >
+                WhatsApp
+              </a>
 
-          <div class="property-body">
-
-            <small>${project.location}</small>
-
-            <h3>${project.title}</h3>
-
-            <p>
-              ${project.description}
-            </p>
-
-            <div class="property-meta">
-
-              <div>
-
-                <div class="price">
-                  From €${project.minPrice.toLocaleString()}
-                </div>
-
-                <small>
-                  ${project.unitsCount} units available
-                </small>
-
-              </div>
-
-              <div class="card-actions">
-
-                <a
-                  href="https://wa.me/447459899618?text=${whatsappMessage}"
-                  class="card-btn"
-                >
-                  WhatsApp
-                </a>
-
-                <button
-                  class="card-btn secondary-card-btn"
-                >
-                  View project
-                </button>
-
-              </div>
+              <a
+                href="mailto:marcin@nglobalinvestments.com?subject=Property enquiry ${project.ref}&body=${emailBody}"
+                class="card-btn secondary-card-btn"
+              >
+                Request details
+              </a>
 
             </div>
 
@@ -125,8 +102,7 @@ document
 
         </div>
 
-      `;
-
-    });
-
+      </div>
+    `;
+  });
 });
