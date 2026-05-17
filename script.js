@@ -100,7 +100,11 @@ function renderProjects(projects, page = 1) {
 
             <div>
               <div class="price">${priceText}</div>
-              <small class="units">${project.unitsCount || 0} units available</small>
+              <small class="units">
+  ${project.developer === "Domenica"
+    ? "Available now"
+    : `${project.unitsCount || 0} units available`}
+</small>
             </div>
 
             <div class="card-actions">
@@ -164,6 +168,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const type = document.getElementById("type").value.toLowerCase();
     const budgetValue =
   document.getElementById("budget").value;
+const sortValue =
+  document.getElementById("sort").value;
 
     const projects = await fetchProjects();
     const results = document.getElementById("results");
@@ -173,38 +179,102 @@ document.addEventListener("DOMContentLoaded", () => {
     if (pagination) pagination.innerHTML = "";
 
     const matched = projects.filter((project) => {
-      const projectLocation = normalizeLocation(project.location);
-      const projectType = cleanText(project.type).toLowerCase();
-      const projectPrice = Number(project.priceFrom || 0);
 
-      if (!projectPrice) {
-        return false;
-      }
+  const projectLocation =
+    normalizeLocation(project.location);
 
-      const locationMatch = !location || projectLocation.includes(location);
-      const typeMatch = !type || projectType.includes(type);
-      let matchesBudget = true;
+  const projectType =
+    cleanText(project.type).toLowerCase();
 
-if (budgetValue) {
+  const projectPrice =
+    Number(project.priceFrom || 0);
 
-  const [minBudget, maxBudget] =
-    budgetValue.split("-").map(Number);
+  if (!projectPrice) {
+    return false;
+  }
 
-  matchesBudget =
-    projectPrice >= minBudget &&
-    projectPrice <= maxBudget;
+  const locationMatch =
+    !location ||
+    projectLocation.includes(location);
+
+  const typeMatch =
+    !type ||
+    projectType.includes(type);
+
+  let matchesBudget = true;
+
+  if (budgetValue) {
+
+    const [minBudget, maxBudget] =
+      budgetValue.split("-").map(Number);
+
+    matchesBudget =
+      projectPrice >= minBudget &&
+      projectPrice <= maxBudget;
+  }
+
+  return (
+    locationMatch &&
+    typeMatch &&
+    matchesBudget
+  );
+});
+if (sortValue === "price-low") {
+  matched.sort((a, b) => a.priceFrom - b.priceFrom);
 }
 
-      return locationMatch && typeMatch && matchesBudget;
-    });
+if (sortValue === "price-high") {
+  matched.sort((a, b) => b.priceFrom - a.priceFrom);
+}
+
+if (sortValue === "name") {
+  matched.sort((a, b) =>
+    cleanText(a.title).localeCompare(
+      cleanText(b.title)
+    )
+  );
+}
 
     if (matched.length === 0) {
-      results.innerHTML = `<p>No matching projects found.</p>`;
-      return;
-    }
+  const resultsCount = document.getElementById("resultsCount");
 
+  if (resultsCount) {
+    resultsCount.innerText = "0 projects found";
+  }
+
+  results.innerHTML = `<p>No matching projects found.</p>`;
+  return;
+}
+const resultsCount = document.getElementById("resultsCount");
+
+if (resultsCount) {
+  resultsCount.innerText = `${matched.length} projects found`;
+}
     currentMatched = matched;
     currentPage = 1;
     renderProjects(currentMatched, currentPage);
   });
+});
+document.addEventListener("change", (e) => {
+  if (e.target.id !== "sort") return;
+  if (!currentMatched.length) return;
+
+  const sortValue = e.target.value;
+
+  if (sortValue === "price-low") {
+    currentMatched.sort((a, b) => a.priceFrom - b.priceFrom);
+  }
+
+  if (sortValue === "price-high") {
+    currentMatched.sort((a, b) => b.priceFrom - a.priceFrom);
+  }
+
+  if (sortValue === "name") {
+    currentMatched.sort((a, b) =>
+      cleanText(a.title).localeCompare(cleanText(b.title))
+    );
+  }
+
+  currentPage = 1;
+  renderProjects(currentMatched, currentPage);
 });
