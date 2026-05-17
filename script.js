@@ -69,6 +69,8 @@ document.getElementById("propertySearch").addEventListener("submit", async (e) =
 
   matched.slice(0, 12).forEach((project) => {
     const title = cleanText(project.title || "Cyprus property")
+  .replace(/[\s\-–—−‒-]+$/g, "")
+  .trim();
   .replace(/[\u2010-\u2015\u2212–—-]+$/g, "")
   .trim();
     const locationText = cleanText(project.location || "Cyprus");
