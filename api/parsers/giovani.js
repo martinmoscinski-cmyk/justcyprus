@@ -29,43 +29,27 @@ const extractPrice = (text) => {
 };
 
 const extractCity = (html, text, url = "") => {
-  const combined = `${url} ${html} ${text}`.toLowerCase();
-
-  const locations = [
-    ["paralimni", "Paralimni"],
-    ["protaras", "Protaras"],
-    ["pernera", "Pernera"],
-    ["kapparis", "Kapparis"],
-    ["ayia napa", "Ayia Napa"],
-    ["agia napa", "Ayia Napa"],
-    ["ayia-napa", "Ayia Napa"],
-    ["agia-napa", "Ayia Napa"],
-    ["cape greco", "Cape Greco"],
-    ["cape-greco", "Cape Greco"],
-    ["larnaca", "Larnaca"],
-    ["deryneia", "Deryneia"],
-    ["sotira", "Sotira"]
-  ];
-
-  for (const [needle, label] of locations) {
-    if (combined.includes(needle)) {
-      return label;
-    }
-  }
-
-  const cityMatch = text.match(/City:\s*([A-Za-z\s-]+)/i);
+  const cityMatch = text.match(/City:\s*([A-Za-z\s-]+)\s+Zip:/i);
 
   if (cityMatch?.[1]) {
-    const city = normalizeText(cityMatch[1])
-      .replace(/Zip.*$/i, "")
-      .trim();
+    const city = normalizeText(cityMatch[1]).trim();
 
-    if (city.toLowerCase() === "famagusta") {
-      return "";
+    if (city.toLowerCase() !== "famagusta") {
+      return city;
     }
-
-    return city;
   }
+
+  const lowerUrl = url.toLowerCase();
+
+  if (lowerUrl.includes("larnaca")) return "Larnaca";
+  if (lowerUrl.includes("protaras")) return "Protaras";
+  if (lowerUrl.includes("pernera")) return "Pernera";
+  if (lowerUrl.includes("kapparis")) return "Kapparis";
+  if (lowerUrl.includes("ayia-napa") || lowerUrl.includes("agia-napa")) return "Ayia Napa";
+  if (lowerUrl.includes("cape-greco")) return "Cape Greco";
+  if (lowerUrl.includes("deryneia")) return "Deryneia";
+  if (lowerUrl.includes("sotira")) return "Sotira";
+  if (lowerUrl.includes("paralimni")) return "Paralimni";
 
   return "";
 };
