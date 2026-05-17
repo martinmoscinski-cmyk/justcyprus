@@ -79,11 +79,17 @@ const extractImage = (html) => {
 };
 
 export async function getGiovaniProjects() {
-  const pages = [
-    "https://giovani.cy/properties/",
-    "https://giovani.cy/properties/page/2/",
-    "https://giovani.cy/properties/page/3/"
-  ];
+  const pages = [];
+
+for (let i = 1; i <= 20; i++) {
+  if (i === 1) {
+    pages.push("https://giovani.cy/properties/");
+  } else {
+    pages.push(
+      `https://giovani.cy/properties/page/${i}/`
+    );
+  }
+}
 
   const allLinks = [];
 
