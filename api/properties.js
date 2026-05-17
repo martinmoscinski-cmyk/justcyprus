@@ -72,17 +72,25 @@ export default async function handler(req, res) {
           getTag("type") ||
           "Property";
 
-        const price =
-          Number(
-            String(getTag("price") || getTag("PRICE") || "")
-              .replace(/[^\d]/g, "")
-          ) || 0;
+        const rawPrice =
+  getTag("price")
+    .replace(/[^\d]/g,"");
 
-        const image =
-          getTag("image") ||
-          getTag("image_url") ||
-          getTag("IMAGE_URL") ||
-          "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1200&auto=format&fit=crop";
+const price =
+  Number(rawPrice) || 0;
+
+        const rawImage =
+  getTag("image") ||
+  getTag("image_url") ||
+  getTag("IMAGE_URL") ||
+  getTag("picture") ||
+  "";
+
+const image = rawImage
+  .replace(/"/g, "")
+  .replace(/<[^>]*>/g, "")
+  .trim() ||
+  "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1200&auto=format&fit=crop";
 
         const description =
           getTag("description") ||
