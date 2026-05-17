@@ -107,17 +107,29 @@ export default async function handler(req, res) {
           getTag("Type") ||
           "Property";
 
-        const rawTitle =
-          getTag("title") ||
-          getTag("Title") ||
-          getTag("project_name") ||
-          getTag("name") ||
-          getTag("project") ||
-          getTag("Project") ||
-          getTag("development") ||
-          `${location} ${type}`;
+      const rawTitle =
+  getTag("title") ||
+  getTag("Title") ||
+  `${location} ${type}`;
 
-        const projectName = normalizeProjectName(rawTitle);
+const rawProject =
+  getTag("project") ||
+  getTag("Project") ||
+  getTag("project_name") ||
+  getTag("name") ||
+  getTag("development") ||
+  rawTitle;
+
+let projectName = normalizeProjectName(rawProject);
+
+// fallback gdy project dalej wygląda jak unit
+if (
+  /No\.?\s*\d+/i.test(projectName) ||
+  /Apartment\s*\d+/i.test(projectName) ||
+  /Villa\s*No/i.test(projectName)
+) {
+  projectName = normalizeProjectName(rawTitle);
+}
 
         const priceText =
           getTag("Price") ||
