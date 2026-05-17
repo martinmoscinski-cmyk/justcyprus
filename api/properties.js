@@ -71,6 +71,7 @@ export default async function handler(req, res) {
           `${location} ${type}`;
 
       const projectName = rawTitle
+
   .replace(/\s*-\s*Villa No\.?\s*\d+[A-Z]?/gi, "")
   .replace(/\s*-\s*Apartment No\.?\s*\d+[A-Z]?/gi, "")
   .replace(/\s*-\s*Unit No\.?\s*\d+[A-Z]?/gi, "")
@@ -82,20 +83,22 @@ export default async function handler(req, res) {
   .replace(/\(Old\s*\d+\)/gi, "")
   .replace(/Old\s*\d+/gi, "")
 
-  // usuwa końcówki typu - V01 / - V05
-  .replace(/\s*-\s*V\d+/gi, "")
+  .replace(/\s*[-–—]\s*V\d+/gi, "")
 
-  // usuwa końcówki typu /12
   .replace(/\/\d+$/g, "")
 
-  // usuwa samotne myślniki na końcu
+  // NORMALIZACJA DASHY
+  .replace(/[–—]/g, "-")
+
+  // usuwa końcowe minusy
   .replace(/\s*-\s*$/g, "")
 
-  // usuwa końcowe pojedyncze litery np VillasA
+  // usuwa końcowe litery typu VillasA
   .replace(/([a-z])([A-Z])$/g, "$1")
-.replace(/\s*[-–—]+\s*$/g, "")
 
+  // usuwa podwójne spacje
   .replace(/\s{2,}/g, " ")
+
   .trim();
 
         const priceText =
