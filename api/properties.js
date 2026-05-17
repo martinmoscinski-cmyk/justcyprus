@@ -1,7 +1,7 @@
-import { getAristoProjects } from "./parsers/aristo.js";
-import { getPafiliaProjects } from "./parsers/pafilia.js";
-import { getDomenicaProjects } from "./parsers/domenica.js";
-import { normalizeProjectName } from "./parsers/helpers.js";
+import { getAristoProjects } from "./parsers/aristo";
+import { getPafiliaProjects } from "./parsers/pafilia";
+import { getDomenicaProjects } from "./parsers/domenica";
+import { normalizeProjectName } from "./parsers/helpers";
 
 export default async function handler(req, res) {
   try {
@@ -14,7 +14,8 @@ export default async function handler(req, res) {
     const grouped = {};
 
     allUnits.forEach((unit) => {
-      const keyProjectName = normalizeProjectName(unit.projectName);
+      const keyProjectName =
+        normalizeProjectName(unit.projectName);
 
       const key =
         `${unit.developer}-${keyProjectName}-${unit.location}`
@@ -31,7 +32,10 @@ export default async function handler(req, res) {
           priceFrom: unit.price || 0,
           image: unit.image,
           images: [],
-          description: `${keyProjectName} is a selected development in ${unit.location}, with ${String(unit.type || "property").toLowerCase()} options available. Contact us for current availability, layouts and details.`,
+          description:
+            `${keyProjectName} is a selected development in ${unit.location}, with ${String(
+              unit.type || "property"
+            ).toLowerCase()} options available. Contact us for current availability, layouts and details.`,
           unitsCount: 0,
           units: [],
           developer: unit.developer,
@@ -44,20 +48,25 @@ export default async function handler(req, res) {
 
       if (
         unit.price &&
-        (!grouped[key].priceFrom || unit.price < grouped[key].priceFrom)
+        (!grouped[key].priceFrom ||
+          unit.price < grouped[key].priceFrom)
       ) {
         grouped[key].priceFrom = unit.price;
       }
 
       unit.images.forEach((img) => {
-        if (img && !grouped[key].images.includes(img)) {
+        if (
+          img &&
+          !grouped[key].images.includes(img)
+        ) {
           grouped[key].images.push(img);
         }
       });
     });
 
     const projects = Object.values(grouped).filter(
-      (project) => Number(project.priceFrom || 0) > 0
+      (project) =>
+        Number(project.priceFrom || 0) > 0
     );
 
     res.status(200).json({
@@ -66,10 +75,13 @@ export default async function handler(req, res) {
       totalProjects: projects.length,
       totalUnits: allUnits.length
     });
+
   } catch (error) {
+
     res.status(500).json({
       success: false,
       error: error.message
     });
+
   }
 }
