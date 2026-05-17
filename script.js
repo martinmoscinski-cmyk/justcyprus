@@ -1,110 +1,123 @@
-async function fetchProperties() {
+async function fetchProjects() {
 
   const response = await fetch("/api/properties");
 
   const data = await response.json();
 
-  return data.properties || [];
+  return data.projects || [];
 
 }
 
-document.getElementById("propertySearch").addEventListener("submit", async (e) => {
+document
+  .getElementById("propertySearch")
+  .addEventListener("submit", async (e) => {
 
-  e.preventDefault();
+    e.preventDefault();
 
-  const location =
-    document.getElementById("location").value.toLowerCase();
+    const location =
+      document.getElementById("location").value.toLowerCase();
 
-  const type =
-    document.getElementById("type").value.toLowerCase();
+    const type =
+      document.getElementById("type").value.toLowerCase();
 
-  const budget =
-    Number(document.getElementById("budget").value);
+    const budget =
+      Number(document.getElementById("budget").value);
 
-  const properties = await fetchProperties();
+    const projects = await fetchProjects();
 
-  const results = document.getElementById("results");
+    const results =
+      document.getElementById("results");
 
-  results.innerHTML = "";
+    results.innerHTML = "";
 
-  const matched = properties.filter((property) => {
+    const matched = projects.filter((project) => {
 
-    const locationMatch =
-      !location ||
-      property.location.toLowerCase().includes(location);
+      const locationMatch =
+        !location ||
+        project.location.toLowerCase().includes(location);
 
-    const typeMatch =
-      !type ||
-      property.type.toLowerCase().includes(type);
+      const typeMatch =
+        !type ||
+        project.type.toLowerCase().includes(type);
 
-    const budgetMatch =
-      !budget ||
-      property.price <= budget;
+      const budgetMatch =
+        !budget ||
+        project.minPrice <= budget;
 
-    return (
-      locationMatch &&
-      typeMatch &&
-      budgetMatch
-    );
+      return (
+        locationMatch &&
+        typeMatch &&
+        budgetMatch
+      );
 
-  });
+    });
 
-  if (matched.length === 0) {
+    if (matched.length === 0) {
 
-    results.innerHTML = `
-      <p>No matching properties found.</p>
-    `;
+      results.innerHTML = `
+        <p>No matching properties found.</p>
+      `;
 
-    return;
+      return;
 
-  }
+    }
 
-  matched.slice(0, 12).forEach((property) => {
+    matched.slice(0, 12).forEach((project) => {
 
-    const whatsappMessage = encodeURIComponent(
-      `Hi, I am interested in:
-${property.ref}
-${property.title}
-${property.location}`
-    );
+      const whatsappMessage = encodeURIComponent(
+        `Hi, I am interested in project:\n${project.title}\n${project.location}\nRef: ${project.ref}`
+      );
 
-    results.innerHTML += `
+      const mainImage =
+        project.images?.[0] ||
+        "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1200&auto=format&fit=crop";
 
-      <div class="property-card">
+      results.innerHTML += `
 
-        <img src="${property.image}" alt="${property.title}">
+        <div class="property-card">
 
-        <div class="property-body">
+          <img src="${mainImage}" alt="${project.title}">
 
-          <small>${property.location}</small>
+          <div class="property-body">
 
-          <h3>${property.title}</h3>
+            <small>${project.location}</small>
 
-          <p>${property.description}</p>
+            <h3>${project.title}</h3>
 
-          <div class="property-meta">
+            <p>
+              ${project.description}
+            </p>
 
-            <div class="price">
-              ${property.price
-                ? "€" + property.price.toLocaleString()
-                : "Details on request"}
-            </div>
+            <div class="property-meta">
 
-            <div class="card-actions">
+              <div>
 
-              <a
-                href="https://wa.me/447459899618?text=${whatsappMessage}"
-                class="card-btn"
-              >
-                WhatsApp
-              </a>
+                <div class="price">
+                  From €${project.minPrice.toLocaleString()}
+                </div>
 
-              <a
-                href="mailto:marcin@nglobalinvestments.com?subject=Property enquiry ${property.ref}&body=${whatsappMessage}"
-                class="card-btn secondary-card-btn"
-              >
-                Request details
-              </a>
+                <small>
+                  ${project.unitsCount} units available
+                </small>
+
+              </div>
+
+              <div class="card-actions">
+
+                <a
+                  href="https://wa.me/447459899618?text=${whatsappMessage}"
+                  class="card-btn"
+                >
+                  WhatsApp
+                </a>
+
+                <button
+                  class="card-btn secondary-card-btn"
+                >
+                  View project
+                </button>
+
+              </div>
 
             </div>
 
@@ -112,10 +125,8 @@ ${property.location}`
 
         </div>
 
-      </div>
+      `;
 
-    `;
-
-  });
+    });
 
 });
