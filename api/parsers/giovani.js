@@ -4,27 +4,23 @@ import {
   fallbackImage
 } from "./helpers.js";
 
-const cleanGiovaniTitle = (text) => {
+const absoluteUrl = (url) => {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  if (url.startsWith("/")) return `https://giovani.cy${url}`;
+  return `https://giovani.cy/${url}`;
+};
+
+const cleanTitle = (text) => {
   return normalizeProjectName(text)
     .replace(/\s*\.\.\..*$/g, "")
-    .replace(/\s+(Comprising|Are you|consists|located|with|is a|offering).*$/i, "")
-    .replace(/\s+[A-Z]?\d{2,4}$/i, "")
     .replace(/\s+/g, " ")
     .trim();
 };
 
-const detectLocationFromText = (text) => {
-  const value = String(text || "").toLowerCase();
-
-  if (value.includes("paralimni")) return "Paralimni";
-  if (value.includes("protaras")) return "Protaras";
-  if (value.includes("pernera")) return "Pernera";
-  if (value.includes("kapparis")) return "Kapparis";
-  if (value.includes("ayia-napa") || value.includes("ayia napa") || value.includes("agia-napa") || value.includes("agia napa")) return "Ayia Napa";
-  if (value.includes("cape-greco") || value.includes("cape greco")) return "Cape Greco";
-  if (value.includes("larnaca")) return "Larnaca";
-
-  return "";
+const getCityFromDetail = (text) => {
+  const cityMatch = text.match(/City:\s*([A-Za-z\s-]+)\s+(?:Zip:|Country:|Address:)/i);
+  return cityMatch ? normalizeText(cityMatch[1]) : "";
 };
 
 export async function getGiovaniProjects() {
@@ -36,84 +32,90 @@ export async function getGiovaniProjects() {
 
   const html = await response.text();
 
-  const text = normalizeText(
-    html
-      .replace(/<script[\s\S]*?<\/script>/gi, " ")
-      .replace(/<style[\s\S]*?<\/style>/gi, " ")
-      .replace(/<[^>]*>/g, " ")
-  );
-
-  const propertyLinks = [
-    ...html.matchAll(/href=["']([^"']*estate_property[^"']*)["']/gi)
-  ].map((match) => match[1]);
-
-  const matches = [
-    ...text.matchAll(
-      /€\s*([\d,]+)\s*\+?\s*VAT?\s+([A-Z0-9][A-Za-z0-9\s.'’&-]{3,100})\s+([^€]{20,300}?)(?=(?:€\s*[\d,]+\s*\+?\s*VAT?)|Agent:|About|Contact|$)/gi
-    )
+  const linkMatches = [
+    ...html.matchAll(/href=["']([^"']*\/property\/[^"']*)["']/gi)
   ];
+
+  const links = [...new Set(
+    linkMatches
+      .map((match) => absoluteUrl(match[1]))
+      .filter(Boolean)
+  )].slice(0, 30);
 
   const units = [];
 
-  matches.forEach((match, index) => {
-    const price =
-      Number(String(match[1]).replace(/,/g, "")) || 0;
+  for (let index = 0; index < links.length; index++) {
+    const link = links[index];
 
-    if (price < 50000 || price > 10000000) return;
+    try {
+      const detailResponse = await fetch(link, {
+        headers: {
+          "User-Agent": "Mozilla/5.0"
+        }
+      });
 
-    const rawTitle = normalizeText(match[2]);
-    const rawText = normalizeText(match[3]);
+      const detailHtml = await detailResponse.text();
 
-    const title =
-      cleanGiovaniTitle(rawTitle) || "Giovani Property";
+      const detailText = normalizeText(
+        detailHtml
+          .replace(/<script[\s\S]*?<\/script>/gi, " ")
+          .replace(/<style[\s\S]*?<\/style>/gi, " ")
+          .replace(/<[^>]*>/g, " ")
+      );
 
-    const link = propertyLinks[index] || "";
-    const combined = `${title} ${rawTitle} ${rawText} ${link}`;
+      const titleMatch = detailText.match(/#\s*([A-Z0-9][A-Za-z0-9\s.'’&-]{3,100})\s+Available/i);
+      const priceMatch = detailText.match(/Price:\s*€\s*([\d,]+)/i);
+      const typeMatch = detailText.match(/Home\s+2\.\s*([A-Za-z]+)/i);
+      const sizeMatch = detailText.match(/Property Size:\s*([\d.,]+)\s*m/i);
 
-    const location =
-      detectLocationFromText(link) ||
-      detectLocationFromText(combined);
+      const title =
+        cleanTitle(titleMatch?.[1] || "Giovani Property");
 
-    if (!location) return;
+      const price =
+        Number(String(priceMatch?.[1] || "").replace(/,/g, "")) || 0;
 
-    let type = "Property";
+      if (price < 50000 || price > 10000000) continue;
 
-    const lowerCombined = combined.toLowerCase();
+      const location = getCityFromDetail(detailText);
 
-    if (lowerCombined.includes("apartment")) {
-      type = "Apartment";
+      if (!location) continue;
+
+      let type = typeMatch?.[1] || "Property";
+
+      const lower = `${title} ${detailText}`.toLowerCase();
+
+      if (lower.includes("apartment")) type = "Apartment";
+      if (lower.includes("villa")) type = "Villa";
+      if (lower.includes("townhouse") || lower.includes("town house")) type = "Townhouse";
+      if (lower.includes("maisonette")) type = "Maisonette";
+
+      let image = fallbackImage;
+
+      const imageMatch = detailHtml.match(/<img[^>]+src=["']([^"']+)["']/i);
+
+      if (imageMatch?.[1]) {
+        image = absoluteUrl(imageMatch[1]);
+      }
+
+      units.push({
+        unitRef: `GIO-${index + 1}`,
+        projectName: title,
+        unitTitle: title,
+        location,
+        type,
+        price,
+        image,
+        images: [image],
+        description: `${title} is a selected Giovani development in ${location}. Contact us for current availability, layouts and details.`,
+        bedrooms: "",
+        developer: "Giovani",
+        source: link
+      });
+
+    } catch (error) {
+      continue;
     }
-
-    if (lowerCombined.includes("villa")) {
-      type = "Villa";
-    }
-
-    if (
-      lowerCombined.includes("townhouse") ||
-      lowerCombined.includes("town house")
-    ) {
-      type = "Townhouse";
-    }
-
-    if (lowerCombined.includes("maisonette")) {
-      type = "Maisonette";
-    }
-
-    units.push({
-      unitRef: `GIO-${index + 1}`,
-      projectName: title,
-      unitTitle: rawTitle,
-      location,
-      type,
-      price,
-      image: fallbackImage,
-      images: [fallbackImage],
-      description: `${title} is a selected Giovani development in ${location}. Contact us for current availability, layouts and details.`,
-      bedrooms: "",
-      developer: "Giovani",
-      source: link || "https://giovani.cy/properties/"
-    });
-  });
+  }
 
   return units;
 }
