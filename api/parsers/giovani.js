@@ -24,60 +24,47 @@ const cleanText = (html) => {
 
 const extractPrice = (text) => {
   const match = text.match(/€\s*([\d,]+)/i);
-
   if (!match) return 0;
-
   return Number(match[1].replace(/,/g, ""));
 };
 
 const extractCity = (html, text, url = "") => {
+  const combined = `${url} ${html} ${text}`.toLowerCase();
 
-  const patterns = [
-    /City:\s*([A-Za-z\s-]+)/i,
-    /Location:\s*([A-Za-z\s-]+)/i,
-    /in\s+(Paralimni|Protaras|Ayia Napa|Larnaca|Nicosia|Limassol|Paphos)/i,
-    />(Paralimni|Protaras|Ayia Napa|Larnaca|Nicosia|Limassol|Paphos)</i
+  const locations = [
+    ["paralimni", "Paralimni"],
+    ["protaras", "Protaras"],
+    ["pernera", "Pernera"],
+    ["kapparis", "Kapparis"],
+    ["ayia napa", "Ayia Napa"],
+    ["agia napa", "Ayia Napa"],
+    ["ayia-napa", "Ayia Napa"],
+    ["agia-napa", "Ayia Napa"],
+    ["cape greco", "Cape Greco"],
+    ["cape-greco", "Cape Greco"],
+    ["larnaca", "Larnaca"],
+    ["deryneia", "Deryneia"],
+    ["sotira", "Sotira"]
   ];
 
-  for (const pattern of patterns) {
-    const match = text.match(pattern) || html.match(pattern);
-
-    if (match?.[1]) {
-      return normalizeText(match[1])
-        .replace(/Zip.*$/i, "")
-        .trim();
+  for (const [needle, label] of locations) {
+    if (combined.includes(needle)) {
+      return label;
     }
   }
 
-  // fallback z URL
-  const lowerUrl = url.toLowerCase();
+  const cityMatch = text.match(/City:\s*([A-Za-z\s-]+)/i);
 
-  if (lowerUrl.includes("paralimni")) {
-    return "Paralimni";
-  }
+  if (cityMatch?.[1]) {
+    const city = normalizeText(cityMatch[1])
+      .replace(/Zip.*$/i, "")
+      .trim();
 
-  if (lowerUrl.includes("protaras")) {
-    return "Protaras";
-  }
+    if (city.toLowerCase() === "famagusta") {
+      return "";
+    }
 
-  if (lowerUrl.includes("ayia-napa")) {
-    return "Ayia Napa";
-  }
-
-  if (lowerUrl.includes("larnaca")) {
-    return "Larnaca";
-  }
-
-  if (lowerUrl.includes("limassol")) {
-    return "Limassol";
-  }
-
-  if (lowerUrl.includes("paphos")) {
-    return "Paphos";
-  }
-
-  if (lowerUrl.includes("nicosia")) {
-    return "Nicosia";
+    return city;
   }
 
   return "";
@@ -91,17 +78,16 @@ const extractTitle = (html, text) => {
   return normalizeProjectName(
     normalizeText(h1)
       .replace(/Available/i, "")
-      .replace(/\s+(APARTMENT|VILLA|HOUSE|UNIT)\s*\d+[A-Z]?$/i, "")
-      .replace(/\s+\d+[A-Z]?$/i, "")
+      .replace(/\s+(APARTMENT|VILLA|HOUSE|UNIT|OFFICE|PENTHOUSE)\s*[A-Z]?\d+[A-Z]?$/i, "")
+      .replace(/\s+[A-Z]\d{2,4}$/i, "")
+      .replace(/\s+\d{2,4}$/i, "")
       .replace(/\s+/g, " ")
   );
 };
 
 const extractImage = (html) => {
   const og =
-    html.match(
-      /property="og:image"\s+content="([^"]+)"/i
-    )?.[1];
+    html.match(/property="og:image"\s+content="([^"]+)"/i)?.[1];
 
   if (og) return absoluteUrl(og);
 
@@ -128,13 +114,10 @@ export async function getGiovaniProjects() {
       const html = await response.text();
 
       const links = [
-        ...html.matchAll(
-          /href="([^"]*\/property\/[^"]+)"/gi
-        )
+        ...html.matchAll(/href="([^"]*\/property\/[^"]+)"/gi)
       ].map((m) => absoluteUrl(m[1]));
 
       allLinks.push(...links);
-
     } catch (e) {}
   }
 
@@ -153,7 +136,6 @@ export async function getGiovaniProjects() {
       });
 
       const html = await response.text();
-
       const text = cleanText(html);
 
       const location = extractCity(html, text, link);
@@ -172,12 +154,14 @@ export async function getGiovaniProjects() {
 
       const lower = text.toLowerCase();
 
-      if (lower.includes("villa")) {
-        type = "Villa";
-      } else if (lower.includes("apartment")) {
+      if (lower.includes("apartment")) {
         type = "Apartment";
+      } else if (lower.includes("villa")) {
+        type = "Villa";
       } else if (lower.includes("penthouse")) {
         type = "Penthouse";
+      } else if (lower.includes("office")) {
+        type = "Office";
       }
 
       const image = extractImage(html);
@@ -196,10 +180,7 @@ export async function getGiovaniProjects() {
         developer: "Giovani",
         source: link
       });
-
-    } catch (e) {
-      console.log("GIOVANI ERROR:", e.message);
-    }
+    } catch (e) {}
   }
 
   return units;
