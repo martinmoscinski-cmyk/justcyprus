@@ -1,13 +1,12 @@
 import {
+  normalizeText,
   normalizeProjectName,
-  parsePrice,
-  getTagFromItem,
   fallbackImage
 } from "./helpers.js";
 
-export async function getAristoProjects() {
+export async function getDomenicaProjects() {
   const response = await fetch(
-    "https://www.aristodevelopers.com/downloads/AristoDevelopersUnits.xml",
+    "https://www.domenicagroup.com/portfolio",
     {
       headers: {
         "User-Agent": "Mozilla/5.0"
@@ -15,117 +14,58 @@ export async function getAristoProjects() {
     }
   );
 
-  const xml = await response.text();
+  const html = await response.text();
 
-  const items =
-    xml.match(/<property>([\s\S]*?)<\/property>/gi) ||
-    xml.match(/<Unit>([\s\S]*?)<\/Unit>/gi) ||
-    [];
+  const text = normalizeText(
+    html
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]*>/g, " ")
+  );
+
+  const matches = [
+    ...text.matchAll(
+      /([A-Z][A-Za-z0-9'’&.\s-]{2,60})\s+([A-Za-z,\s]+Pafos)\s+Area:\s*([^]*?)\s+Type:\s*([^]*?)\s+(?:Off Plan|Under Construction|For Sale|Completed)\s+Price range:\s*€\s*([\d.,]+)\s*k?/gi
+    )
+  ];
 
   const units = [];
 
-  items.forEach((item, index) => {
-    const getTag = (tag) =>
-      getTagFromItem(item, tag);
+  matches.forEach((match, index) => {
+    const title = normalizeProjectName(match[1]);
+    const location = normalizeText(match[2]);
+    const type = normalizeText(match[4]);
 
-    const location =
-      getTag("town") ||
-      getTag("city") ||
-      getTag("area") ||
-      getTag("Area") ||
-      getTag("region") ||
-      "Cyprus";
+    const hasK = /k/i.test(match[0]);
 
-    const type =
-      getTag("property_type") ||
-      getTag("type") ||
-      getTag("Type") ||
-      "Property";
+    let price =
+      Number(
+        String(match[5])
+          .replace(/,/g, "")
+          .replace(/\s/g, "")
+      ) || 0;
 
-    const rawTitle =
-      getTag("title") ||
-      getTag("Title") ||
-      `${location} ${type}`;
-
-    const rawProject =
-      getTag("project") ||
-      getTag("Project") ||
-      getTag("project_name") ||
-      getTag("development") ||
-      getTag("name") ||
-      rawTitle;
-
-    const projectName =
-      normalizeProjectName(rawProject);
-
-    const description =
-      getTag("description") ||
-      getTag("Description") ||
-      `${type} in ${location}`;
-
-    const price = parsePrice(
-      getTag("Price") || getTag("price")
-    );
-
-    let image =
-      getTag("image") ||
-      getTag("IMAGE_URL") ||
-      getTag("image_url") ||
-      getTag("picture") ||
-      "";
-
-    image = image
-      .replace(/"/g, "")
-      .replace(/<[^>]*>/g, "")
-      .trim();
-
-    if (image.startsWith("//")) {
-      image = `https:${image}`;
+    if (hasK) {
+      price = price * 1000;
     }
 
-    if (!image) {
-      const imageMatch = item.match(
-        /<image[^>]*>([\s\S]*?)<\/image>/i
-      );
-
-      if (imageMatch && imageMatch[1]) {
-        image = imageMatch[1].trim();
-
-        if (image.startsWith("//")) {
-          image = `https:${image}`;
-        }
-      }
+    if (price < 50000 || price > 10000000) {
+      return;
     }
-
-    if (!image) {
-      image = fallbackImage;
-    }
-
-    const bedrooms =
-      getTag("beds") ||
-      getTag("Bedrooms") ||
-      getTag("bedrooms") ||
-      "";
-
-    const unitRef =
-      `ARI-${location.slice(0, 3).toUpperCase()}-${type
-        .slice(0, 3)
-        .toUpperCase()}-${index + 1}`;
 
     units.push({
-      unitRef,
-      projectName,
-      unitTitle: rawTitle,
+      unitRef: `DOM-PAF-PRO-${index + 1}`,
+      projectName: title,
+      unitTitle: title,
       location,
       type,
       price,
-      image,
-      images: [image],
-      description,
-      bedrooms,
-      developer: "Aristo",
-      source:
-        "https://www.aristodevelopers.com/downloads/AristoDevelopersUnits.xml"
+      image: fallbackImage,
+      images: [fallbackImage],
+      description: `${title} is a selected Domenica Group development in ${location}. Contact us for current availability, layouts and details.`,
+      bedrooms: "",
+      developer: "Domenica",
+      source: "https://www.domenicagroup.com/portfolio"
     });
   });
 
