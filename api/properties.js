@@ -79,30 +79,29 @@ export default async function handler(req, res) {
           getTag("development") ||
           `${location} ${type}`;
 
-        const projectName = cleanName(rawTitle)
-          .replace(/\s*-\s*Villa No\.?\s*\d+[A-Z]?/gi, "")
-          .replace(/\s*-\s*Apartment No\.?\s*\d+[A-Z]?/gi, "")
-          .replace(/\s*-\s*Unit No\.?\s*\d+[A-Z]?/gi, "")
+   const projectName = cleanName(rawTitle)
+  .replace(/\s*[-–—]\s*Villa No\.?\s*\d+[A-Z]?/gi, "")
+  .replace(/\s*[-–—]\s*Apartment No\.?\s*\d+[A-Z]?/gi, "")
+  .replace(/\s*[-–—]\s*Unit No\.?\s*\d+[A-Z]?/gi, "")
 
-          .replace(/Villa No\.?\s*\d+[A-Z]?/gi, "")
-          .replace(/Apartment No\.?\s*\d+[A-Z]?/gi, "")
-          .replace(/Unit No\.?\s*\d+[A-Z]?/gi, "")
+  .replace(/Villa No\.?\s*\d+[A-Z]?/gi, "")
+  .replace(/Apartment No\.?\s*\d+[A-Z]?/gi, "")
+  .replace(/Unit No\.?\s*\d+[A-Z]?/gi, "")
 
-          .replace(/\(Old\s*\d+\)/gi, "")
-          .replace(/Old\s*\d+/gi, "")
+  .replace(/\(Old\s*\d+\)/gi, "")
+  .replace(/Old\s*\d+/gi, "")
 
-          .replace(/\s*-\s*V\d+/gi, "")
-.replace(/\s*-\s*[A-Z]\d+$/gi, "")
-.replace(/\s*Apartment\s*\d+[A-Z]?$/gi, "")
-.replace(/\s*Apt\.?\s*\d+[A-Z]?$/gi, "")
-.replace(/\/\d+$/g, "")
+  .replace(/\s*[-–—]\s*V\d+/gi, "")
+  .replace(/\s*[-–—]\s*[A-Z]\d+$/gi, "")
+  .replace(/\s*Apartment\s*\d+[A-Z]?$/gi, "")
+  .replace(/\s*Apt\.?\s*\d+[A-Z]?$/gi, "")
+  .replace(/\/\d+$/g, "")
 
-          .replace(/\s*[-–—]+\s*$/g, "")
+  .replace(/([a-z])([A-Z])$/g, "$1")
 
-          .replace(/([a-z])([A-Z])$/g, "$1")
-
-          .replace(/\s{2,}/g, " ")
-          .trim();
+  .replace(/\s*[-–—]+\s*$/g, "")
+  .replace(/\s{2,}/g, " ")
+  .trim();
 
         const priceText =
           getTag("Price") ||
