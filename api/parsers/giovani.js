@@ -18,27 +18,37 @@ const cleanTitle = (text) => {
     .trim();
 };
 
-const getCity = (text) => {
+const extractCity = (text) => {
   const match = text.match(/City:\s*([A-Za-z\s-]+)\s+Zip:/i);
   return match ? normalizeText(match[1]) : "";
 };
 
 export async function getGiovaniProjects() {
-  const response = await fetch("https://giovani.cy/properties/", {
-    headers: {
-      "User-Agent": "Mozilla/5.0"
-    }
-  });
+  const listingPages = [
+    "https://giovani.cy/properties/",
+    "https://giovani.cy/properties/page/2/",
+    "https://giovani.cy/properties/page/3/"
+  ];
 
-  const html = await response.text();
+  const detailLinks = [];
 
-  const links = [
-    ...html.matchAll(/href=["']([^"']*\/property\/[^"']+)["']/gi)
-  ]
-    .map((match) => absoluteUrl(match[1]))
-    .filter((url) => url.includes("giovani.cy/property/"));
+  for (const pageUrl of listingPages) {
+    const response = await fetch(pageUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0"
+      }
+    });
 
-  const uniqueLinks = [...new Set(links)].slice(0, 40);
+    const html = await response.text();
+
+    const links = [
+      ...html.matchAll(/href=["']([^"']*\/property\/[^"']*\/)["']/gi)
+    ].map((match) => absoluteUrl(match[1]));
+
+    detailLinks.push(...links);
+  }
+
+  const uniqueLinks = [...new Set(detailLinks)].slice(0, 80);
 
   const units = [];
 
@@ -61,10 +71,17 @@ export async function getGiovaniProjects() {
           .replace(/<[^>]*>/g, " ")
       );
 
-      const titleMatch = detailText.match(/#\s*([A-Z0-9][A-Za-z0-9\s.'’&-]{3,100})\s+Available/i);
-      const priceMatch = detailText.match(/Price:\s*€\s*([\d,]+)/i);
+      const titleMatch = detailText.match(
+        /#\s*([A-Z0-9][A-Za-z0-9\s.'’&-]{3,100})\s+Available/i
+      );
 
-      const title = cleanTitle(titleMatch?.[1] || "Giovani Property");
+      const priceMatch = detailText.match(
+        /Price:\s*€\s*([\d,]+)/i
+      );
+
+      const title = cleanTitle(
+        titleMatch?.[1] || "Giovani Property"
+      );
 
       const price =
         Number(String(priceMatch?.[1] || "").replace(/,/g, "")) || 0;
@@ -73,7 +90,7 @@ export async function getGiovaniProjects() {
         continue;
       }
 
-      const location = getCity(detailText);
+      const location = extractCity(detailText);
 
       if (!location) {
         continue;
@@ -90,14 +107,22 @@ export async function getGiovaniProjects() {
 
       let image = fallbackImage;
 
-      const imageMatch = detailHtml.match(/<img[^>]+src=["']([^"']+)["']/i);
+      const imageMatches = [
+        ...detailHtml.matchAll(/<img[^>]+src=["']([^"']+)["']/gi)
+      ];
 
-      if (
-        imageMatch?.[1] &&
-        !imageMatch[1].toLowerCase().includes("logo") &&
-        !imageMatch[1].toLowerCase().includes("svg")
-      ) {
-        image = absoluteUrl(imageMatch[1]);
+      const realImage = imageMatches
+        .map((match) => match[1])
+        .find((src) =>
+          src &&
+          !src.toLowerCase().includes("logo") &&
+          !src.toLowerCase().includes("svg") &&
+          !src.toLowerCase().includes("icon") &&
+          !src.toLowerCase().includes("favicon")
+        );
+
+      if (realImage) {
+        image = absoluteUrl(realImage);
       }
 
       units.push({
