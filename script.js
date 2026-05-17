@@ -6,11 +6,12 @@ async function fetchProjects() {
 
 function cleanText(text) {
   return String(text || "")
+    .normalize("NFKC")
     .replace(/<[^>]*>/g, "")
     .replace(/&nbsp;/g, " ")
+    .replace(/&#xA0;/g, " ")
     .replace(/\u00A0/g, " ")
-    .replace(/[–—]/g, "-")
-    .replace(/\s*-\s*$/g, "")
+    .replace(/[\u2010-\u2015\u2212–—-]+$/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -67,7 +68,9 @@ document.getElementById("propertySearch").addEventListener("submit", async (e) =
   }
 
   matched.slice(0, 12).forEach((project) => {
-    const title = cleanText(project.title || "Cyprus property");
+    const title = cleanText(project.title || "Cyprus property")
+  .replace(/[\u2010-\u2015\u2212–—-]+$/g, "")
+  .trim();
     const locationText = cleanText(project.location || "Cyprus");
     const ref = cleanText(project.ref || "JC-PROJECT");
     const description = shortDescription(project.description);
