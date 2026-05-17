@@ -95,7 +95,11 @@ export default async function handler(req, res) {
           .replace(/\s/g, "")
           .trim();
 
-        const price = Number(cleanPrice) || 0;
+        let price = Number(cleanPrice) || 0;
+
+if (price < 50000 || price > 10000000) {
+  price = 0;
+}
 
         const rawImage =
           getTag("image") ||
@@ -171,9 +175,9 @@ export default async function handler(req, res) {
     allUnits.forEach((unit) => {
 
       const key =
-        `${unit.developer}-${unit.projectName}-${unit.location}-${unit.type}`
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-");
+  `${unit.developer}-${unit.projectName}-${unit.location}`
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-");
 
       if (!grouped[key]) {
 
