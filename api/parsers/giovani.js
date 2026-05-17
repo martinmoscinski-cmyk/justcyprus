@@ -4,6 +4,15 @@ import {
   fallbackImage
 } from "./helpers.js";
 
+const cleanGiovaniTitle = (text) => {
+  return normalizeProjectName(text)
+    .replace(/\s*\.\.\..*$/g, "")
+    .replace(/\s+(Comprising|Are you|consists|located|with|is a).*$/i, "")
+    .replace(/\s+[A-Z]?\d{2,4}$/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+};
+
 export async function getGiovaniProjects() {
   const response = await fetch("https://giovani.cy/properties/", {
     headers: {
@@ -22,7 +31,7 @@ export async function getGiovaniProjects() {
 
   const matches = [
     ...text.matchAll(
-      /€\s*([\d,]+)\s*\+?\s*VAT?\s+([A-Z0-9][A-Za-z0-9\s.'’&-]{3,80})\s+([^€]{20,350}?)(?=(?:€\s*[\d,]+\s*\+?\s*VAT?)|Agent:|About|Contact|$)/gi
+      /€\s*([\d,]+)\s*\+?\s*VAT?\s+([A-Z0-9][A-Za-z0-9\s.'’&-]{3,100})\s+([^€]{20,300}?)(?=(?:€\s*[\d,]+\s*\+?\s*VAT?)|Agent:|About|Contact|$)/gi
     )
   ];
 
@@ -35,26 +44,21 @@ export async function getGiovaniProjects() {
     if (price < 50000 || price > 10000000) return;
 
     const rawTitle = normalizeText(match[2]);
-    const title = normalizeProjectName(rawTitle);
-
-    const description = normalizeText(match[3]);
+    const rawText = normalizeText(match[3]);
 
     const combined =
-      `${title} ${description}`.toLowerCase();
+      `${rawTitle} ${rawText}`.toLowerCase();
+
+    const title =
+      cleanGiovaniTitle(rawTitle) || "Giovani Property";
 
     let type = "Property";
 
-    if (
-      combined.includes("apartment") ||
-      combined.includes("apartments")
-    ) {
+    if (combined.includes("apartment")) {
       type = "Apartment";
     }
 
-    if (
-      combined.includes("villa") ||
-      combined.includes("villas")
-    ) {
+    if (combined.includes("villa")) {
       type = "Villa";
     }
 
@@ -65,57 +69,43 @@ export async function getGiovaniProjects() {
       type = "Townhouse";
     }
 
-    if (
-      combined.includes("maisonette")
-    ) {
+    if (combined.includes("maisonette")) {
       type = "Maisonette";
     }
 
-    let location = "Paralimni";
+    let location = "";
 
-    if (combined.includes("protaras")) {
+    if (combined.includes("paralimni")) {
+      location = "Paralimni";
+    } else if (combined.includes("protaras")) {
       location = "Protaras";
-    }
-
-    if (combined.includes("pernera")) {
+    } else if (combined.includes("pernera")) {
       location = "Pernera";
-    }
-
-    if (combined.includes("kapparis")) {
+    } else if (combined.includes("kapparis")) {
       location = "Kapparis";
-    }
-
-    if (
+    } else if (
       combined.includes("ayia napa") ||
       combined.includes("agia napa")
     ) {
       location = "Ayia Napa";
-    }
-
-    if (combined.includes("cape greco")) {
+    } else if (combined.includes("cape greco")) {
       location = "Cape Greco";
-    }
-
-    if (combined.includes("larnaca")) {
+    } else if (combined.includes("larnaca")) {
       location = "Larnaca";
-    }
-
-    if (combined.includes("famagusta")) {
-      location = "Famagusta";
+    } else {
+      return;
     }
 
     units.push({
-      unitRef: `GIO-PAR-PRO-${index + 1}`,
+      unitRef: `GIO-${index + 1}`,
       projectName: title,
-      unitTitle: title,
+      unitTitle: rawTitle,
       location,
       type,
       price,
       image: fallbackImage,
       images: [fallbackImage],
-      description:
-        description ||
-        `${title} is a selected Giovani development in ${location}. Contact us for current availability, layouts and details.`,
+      description: `${title} is a selected Giovani development in ${location}. Contact us for current availability, layouts and details.`,
       bedrooms: "",
       developer: "Giovani",
       source: "https://giovani.cy/properties/"
