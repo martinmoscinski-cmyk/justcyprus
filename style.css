@@ -824,3 +824,15 @@ nav a:hover{
 .search-results-wrap{
   padding:40px 0 90px;
 }
+.card-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.secondary-card-btn{
+  background:white;
+  color:var(--text);
+  border:1px solid var(--line);
+  box-shadow:none;
+}
