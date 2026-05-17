@@ -70,21 +70,32 @@ export default async function handler(req, res) {
           getTag("development") ||
           `${location} ${type}`;
 
-        const projectName = rawTitle
-  .replace(/\s*-\s*Villa No\.?\s*\d+/gi, "")
-  .replace(/\s*-\s*Apartment No\.?\s*\d+/gi, "")
-  .replace(/\s*-\s*Unit No\.?\s*\d+/gi, "")
+      const projectName = rawTitle
+  .replace(/\s*-\s*Villa No\.?\s*\d+[A-Z]?/gi, "")
+  .replace(/\s*-\s*Apartment No\.?\s*\d+[A-Z]?/gi, "")
+  .replace(/\s*-\s*Unit No\.?\s*\d+[A-Z]?/gi, "")
+
+  .replace(/Villa No\.?\s*\d+[A-Z]?/gi, "")
+  .replace(/Apartment No\.?\s*\d+[A-Z]?/gi, "")
+  .replace(/Unit No\.?\s*\d+[A-Z]?/gi, "")
+
+  .replace(/\(Old\s*\d+\)/gi, "")
+  .replace(/Old\s*\d+/gi, "")
+
+  // usuwa końcówki typu - V01 / - V05
+  .replace(/\s*-\s*V\d+/gi, "")
+
+  // usuwa końcówki typu /12
   .replace(/\/\d+$/g, "")
-  .replace(/Villa No\.?\s*\d+/gi, "")
-  .replace(/Apartment No\.?\s*\d+/gi, "")
-  .replace(/Unit No\.?\s*\d+/gi, "")
-  .replace(/No\.?\s*\d+/gi, "")
-.replace(/\(Old\s*\d+\)/gi, "")
-.replace(/Old\s*\d+/gi, "")
-.replace(/([a-z])([A-Z])$/g, "$1")
-.replace(/\s+-\s+$/g, "")
-.replace(/\s{2,}/g, " ")
-  .trim() || rawTitle;
+
+  // usuwa samotne myślniki na końcu
+  .replace(/\s*-\s*$/g, "")
+
+  // usuwa końcowe pojedyncze litery np VillasA
+  .replace(/([a-z])([A-Z])$/g, "$1")
+
+  .replace(/\s{2,}/g, " ")
+  .trim();
 
         const priceText =
           getTag("Price") ||

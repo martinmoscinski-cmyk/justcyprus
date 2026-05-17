@@ -11,18 +11,6 @@ function cleanText(text) {
     .trim();
 }
 
-function marketingTitle(project) {
-  const location = cleanText(project.location || "Cyprus");
-  const type = cleanText(project.type || "").toLowerCase();
-
-  if (type.includes("villa")) return `Modern Villas in ${location}`;
-  if (type.includes("apartment")) return `Apartments in ${location}`;
-  if (type.includes("house")) return `Modern Homes in ${location}`;
-  if (type.includes("penthouse")) return `Penthouses in ${location}`;
-
-  return `Property in ${location}`;
-}
-
 function makePrice(price) {
   const value = Number(price || 0);
 
@@ -75,7 +63,7 @@ document.getElementById("propertySearch").addEventListener("submit", async (e) =
   }
 
   matched.slice(0, 12).forEach((project) => {
-    const title = marketingTitle(project);
+    const title = cleanText(project.title || "Cyprus property");
     const projectName = cleanText(project.title || "");
     const locationText = cleanText(project.location || "Cyprus");
     const ref = cleanText(project.ref || "JC-PROJECT");
@@ -109,8 +97,6 @@ document.getElementById("propertySearch").addEventListener("submit", async (e) =
           <small>${locationText}</small>
 
           <h3>${title}</h3>
-
-          <p class="project-name">${projectName}</p>
 
           <p>${description}</p>
 
