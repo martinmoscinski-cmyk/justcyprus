@@ -13,9 +13,6 @@ export default async function handler(req, res) {
     }
   ];
 
-  const fallbackImage =
-    "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1200&auto=format&fit=crop";
-
   try {
 
     const allUnits = [];
@@ -43,70 +40,34 @@ export default async function handler(req, res) {
           );
 
           return match
-            ? match[1].replace(/<!\[CDATA\[|\]\]>/g, "").trim()
+            ? match[1]
+                .replace(/<!\[CDATA\[|\]\]>/g, "")
+                .trim()
             : "";
         };
 
-        const getAnyTag = (tags) => {
-          for (const tag of tags) {
-            const value = getTag(tag);
-            if (value) return value;
-          }
-          return "";
-        };
-
-        const parsePrice = () => {
-          const priceText = getAnyTag([
-            "price",
-            "PRICE",
-            "Price",
-            "property_price",
-            "PropertyPrice",
-            "sale_price",
-            "SalePrice",
-            "asking_price",
-            "AskingPrice",
-            "from_price",
-            "price_from",
-            "unit_price",
-            "UnitPrice",
-            "value"
-          ]);
-
-          if (!priceText) return 0;
-
-          let cleaned = priceText
-            .replace(/€/g, "")
-            .replace(/EUR/gi, "")
-            .replace(/,/g, "")
-            .replace(/\s/g, "")
-            .replace(/[^\d.]/g, "");
-
-          let value = Number(cleaned);
-
-          if (!value) return 0;
-
-          if (value > 10000000 && value % 100 === 0) {
-            value = value / 100;
-          }
-
-          if (value < 50000 || value > 10000000) {
-            return 0;
-          }
-
-          return Math.round(value);
-        };
-
         const location =
-          getAnyTag(["town", "city", "area", "region", "location"]) ||
+          getTag("town") ||
+          getTag("city") ||
+          getTag("area") ||
+          getTag("Area") ||
+          getTag("region") ||
           "Cyprus";
 
         const type =
-          getAnyTag(["property_type", "type", "category"]) ||
+          getTag("property_type") ||
+          getTag("type") ||
+          getTag("Type") ||
           "Property";
 
         const rawTitle =
-          getAnyTag(["title", "project_name", "name", "project", "development"]) ||
+          getTag("title") ||
+          getTag("Title") ||
+          getTag("project_name") ||
+          getTag("name") ||
+          getTag("project") ||
+          getTag("Project") ||
+          getTag("development") ||
           `${location} ${type}`;
 
         const projectName = rawTitle
@@ -117,22 +78,66 @@ export default async function handler(req, res) {
           .replace(/\s+-\s+$/g, "")
           .trim() || rawTitle;
 
-        const price = parsePrice();
+        const priceText =
+          getTag("Price") ||
+          getTag("price") ||
+          "";
+
+        const cleanPrice = priceText
+          .replace(/&#x20AC;/g, "")
+          .replace(/€/g, "")
+          .replace(/,/g, "")
+          .replace(/\s/g, "")
+          .trim();
+
+        const price = Number(cleanPrice) || 0;
 
         const rawImage =
-          getAnyTag(["image", "image_url", "IMAGE_URL", "picture", "photo", "url"]);
+          getTag("image") ||
+          getTag("IMAGE_URL") ||
+          getTag("image_url") ||
+          getTag("picture") ||
+          "";
 
-        const image = rawImage
+        let image = rawImage
           .replace(/"/g, "")
           .replace(/<[^>]*>/g, "")
-          .trim() || fallbackImage;
+          .trim();
+
+        if (image.startsWith("//")) {
+          image = `https:${image}`;
+        }
+
+        if (!image) {
+          const imageMatch = item.match(
+            /<image[^>]*>([\s\S]*?)<\/image>/i
+          );
+
+          if (imageMatch && imageMatch[1]) {
+            image = imageMatch[1].trim();
+
+            if (image.startsWith("//")) {
+              image = `https:${image}`;
+            }
+          }
+        }
+
+        if (!image) {
+          image =
+            "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1200&auto=format&fit=crop";
+        }
 
         const description =
-          getAnyTag(["description", "desc", "short_description"]) ||
+          getTag("description") ||
+          getTag("Description") ||
+          getTag("desc") ||
           `${type} in ${location}`;
 
         const bedrooms =
-          getAnyTag(["beds", "bedrooms", "BEDROOMS", "Bedrooms"]);
+          getTag("beds") ||
+          getTag("Bedrooms") ||
+          getTag("bedrooms") ||
+          "";
 
         const unitRef =
           `${feed.code}-${location.slice(0,3).toUpperCase()}-${type.slice(0,3).toUpperCase()}-${index + 1}`;
@@ -166,6 +171,7 @@ export default async function handler(req, res) {
           .replace(/[^a-z0-9]+/g, "-");
 
       if (!grouped[key]) {
+
         grouped[key] = {
           projectId: key,
           ref: `${unit.unitRef.split("-").slice(0,3).join("-")}-PROJECT`,
@@ -181,6 +187,7 @@ export default async function handler(req, res) {
           developer: unit.developer,
           source: unit.source
         };
+
       }
 
       grouped[key].units.push(unit);
@@ -188,7 +195,10 @@ export default async function handler(req, res) {
 
       if (
         unit.price &&
-        (!grouped[key].priceFrom || unit.price < grouped[key].priceFrom)
+        (
+          !grouped[key].priceFrom ||
+          unit.price < grouped[key].priceFrom
+        )
       ) {
         grouped[key].priceFrom = unit.price;
       }
