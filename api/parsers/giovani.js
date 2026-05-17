@@ -22,7 +22,7 @@ export async function getGiovaniProjects() {
 
   const matches = [
     ...text.matchAll(
-      /€\s*([\d,]+)\s*\+VAT\s+([A-Z0-9][A-Z0-9\s.-]{3,60})\s+([^€]{20,260}?)(?=(?:€\s*[\d,]+\s*\+VAT)|Agent:|About)/gi
+      /€\s*([\d,]+)\s*\+?\s*VAT?\s+([A-Z0-9][A-Za-z0-9\s.'’&-]{3,80})\s+([^€]{20,350}?)(?=(?:€\s*[\d,]+\s*\+?\s*VAT?)|Agent:|About|Contact|$)/gi
     )
   ];
 
@@ -39,41 +39,73 @@ export async function getGiovaniProjects() {
 
     const description = normalizeText(match[3]);
 
+    const combined =
+      `${title} ${description}`.toLowerCase();
+
     let type = "Property";
 
-    if (title.toLowerCase().includes("apartment")) {
+    if (
+      combined.includes("apartment") ||
+      combined.includes("apartments")
+    ) {
       type = "Apartment";
     }
 
-    if (title.toLowerCase().includes("villa")) {
+    if (
+      combined.includes("villa") ||
+      combined.includes("villas")
+    ) {
       type = "Villa";
     }
 
-    let location = "Cyprus";
+    if (
+      combined.includes("townhouse") ||
+      combined.includes("town house")
+    ) {
+      type = "Townhouse";
+    }
 
-    const locationHints = [
-      "Paralimni",
-      "Protaras",
-      "Pernera",
-      "Kapparis",
-      "Ayia Napa",
-      "Cape Greco",
-      "Larnaca",
-      "Famagusta"
-    ];
+    if (
+      combined.includes("maisonette")
+    ) {
+      type = "Maisonette";
+    }
 
-    for (const hint of locationHints) {
-      if (
-        description.toLowerCase().includes(hint.toLowerCase()) ||
-        title.toLowerCase().includes(hint.toLowerCase())
-      ) {
-        location = hint;
-        break;
-      }
+    let location = "Paralimni";
+
+    if (combined.includes("protaras")) {
+      location = "Protaras";
+    }
+
+    if (combined.includes("pernera")) {
+      location = "Pernera";
+    }
+
+    if (combined.includes("kapparis")) {
+      location = "Kapparis";
+    }
+
+    if (
+      combined.includes("ayia napa") ||
+      combined.includes("agia napa")
+    ) {
+      location = "Ayia Napa";
+    }
+
+    if (combined.includes("cape greco")) {
+      location = "Cape Greco";
+    }
+
+    if (combined.includes("larnaca")) {
+      location = "Larnaca";
+    }
+
+    if (combined.includes("famagusta")) {
+      location = "Famagusta";
     }
 
     units.push({
-      unitRef: `GIO-${index + 1}`,
+      unitRef: `GIO-PAR-PRO-${index + 1}`,
       projectName: title,
       unitTitle: title,
       location,
@@ -81,7 +113,9 @@ export async function getGiovaniProjects() {
       price,
       image: fallbackImage,
       images: [fallbackImage],
-      description,
+      description:
+        description ||
+        `${title} is a selected Giovani development in ${location}. Contact us for current availability, layouts and details.`,
       bedrooms: "",
       developer: "Giovani",
       source: "https://giovani.cy/properties/"
