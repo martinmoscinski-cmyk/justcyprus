@@ -28,40 +28,59 @@ export default async function handler(req, res) {
   };
 
   const normalizeProjectName = (text) => {
-  let name = normalizeText(text);
+    let name = normalizeText(text);
 
-  // usuwa numery unitów
-  name = name
-    .replace(/\s*-\s*Villa No\.?\s*\d+[A-Z]?/gi, "")
-    .replace(/\s*-\s*Apartment No\.?\s*\d+[A-Z]?/gi, "")
-    .replace(/\s*-\s*Maisonette No\.?\s*\d+[A-Z]?/gi, "")
-    .replace(/\s*-\s*Semi Detached House No\.?\s*\d+[A-Z]?/gi, "")
-    .replace(/\s*-\s*Unit No\.?\s*\d+[A-Z]?/gi, "")
+    name = name
+      .replace(/\s*-\s*Villa No\.?\s*\d+[A-Z]?/gi, "")
+      .replace(/\s*-\s*Apartment No\.?\s*\d+[A-Z]?/gi, "")
+      .replace(/\s*-\s*Maisonette No\.?\s*\d+[A-Z]?/gi, "")
+      .replace(/\s*-\s*Semi Detached House No\.?\s*\d+[A-Z]?/gi, "")
+      .replace(/\s*-\s*Unit No\.?\s*\d+[A-Z]?/gi, "")
+      .replace(/Villa No\.?\s*\d+[A-Z]?/gi, "")
+      .replace(/Apartment No\.?\s*\d+[A-Z]?/gi, "")
+      .replace(/Maisonette No\.?\s*\d+[A-Z]?/gi, "")
+      .replace(/Semi Detached House No\.?\s*\d+[A-Z]?/gi, "")
+      .replace(/Unit No\.?\s*\d+[A-Z]?/gi, "")
+      .replace(/\s*-\s*V\d+$/gi, "")
+      .replace(/\s*-\s*[A-Z]\d+$/gi, "")
+      .replace(/\/\d+$/g, "")
+      .replace(/\(Old\s*\d+\)/gi, "")
+      .replace(/Old\s*\d+/gi, "")
+      .replace(/\s*[-–—]+\s*$/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
 
-    .replace(/Villa No\.?\s*\d+[A-Z]?/gi, "")
-    .replace(/Apartment No\.?\s*\d+[A-Z]?/gi, "")
-    .replace(/Maisonette No\.?\s*\d+[A-Z]?/gi, "")
-    .replace(/Semi Detached House No\.?\s*\d+[A-Z]?/gi, "")
-    .replace(/Unit No\.?\s*\d+[A-Z]?/gi, "")
+    return name;
+  };
 
-    // usuwa stare suffixy
-    .replace(/\s*-\s*V\d+$/gi, "")
-    .replace(/\s*-\s*[A-Z]\d+$/gi, "")
-    .replace(/\/\d+$/g, "")
+  const detectPafiliaProject = (rawTitle, description, image) => {
+    const text = `${rawTitle} ${description} ${image}`.toLowerCase();
 
-    // old
-    .replace(/\(Old\s*\d+\)/gi, "")
-    .replace(/Old\s*\d+/gi, "")
+    const projects = [
+      "Elysia Blu",
+      "Minthis",
+      "ONE",
+      "NEO",
+      "Lofos",
+      "Pearl Park",
+      "Pafilia Gardens",
+      "Aphrodite Springs",
+      "Park Avenue",
+      "Oasis",
+      "Elite Residences",
+      "The Edge",
+      "Urban",
+      "Mediterranean Heights"
+    ];
 
-    // końcowe myślniki
-    .replace(/\s*[-–—]+\s*$/g, "")
+    for (const project of projects) {
+      if (text.includes(project.toLowerCase())) {
+        return project;
+      }
+    }
 
-    // wielokrotne spacje
-    .replace(/\s+/g, " ")
-    .trim();
-
-  return name;
-};
+    return "";
+  };
 
   try {
     const allUnits = [];
@@ -87,9 +106,7 @@ export default async function handler(req, res) {
           );
 
           return match
-            ? normalizeText(
-                match[1].replace(/<!\[CDATA\[|\]\]>/g, "")
-              )
+            ? normalizeText(match[1].replace(/<!\[CDATA\[|\]\]>/g, ""))
             : "";
         };
 
@@ -107,29 +124,10 @@ export default async function handler(req, res) {
           getTag("Type") ||
           "Property";
 
-      const rawTitle =
-  getTag("title") ||
-  getTag("Title") ||
-  `${location} ${type}`;
-
-const rawProject =
-  getTag("project") ||
-  getTag("Project") ||
-  getTag("project_name") ||
-  getTag("name") ||
-  getTag("development") ||
-  rawTitle;
-
-let projectName = normalizeProjectName(rawProject);
-
-// fallback gdy project dalej wygląda jak unit
-if (
-  /No\.?\s*\d+/i.test(projectName) ||
-  /Apartment\s*\d+/i.test(projectName) ||
-  /Villa\s*No/i.test(projectName)
-) {
-  projectName = normalizeProjectName(rawTitle);
-}
+        const rawTitle =
+          getTag("title") ||
+          getTag("Title") ||
+          `${location} ${type}`;
 
         const priceText =
           getTag("Price") ||
@@ -149,6 +147,12 @@ if (
           price = 0;
         }
 
+        const description =
+          getTag("description") ||
+          getTag("Description") ||
+          getTag("desc") ||
+          `${type} in ${location}`;
+
         const rawImage =
           getTag("image") ||
           getTag("IMAGE_URL") ||
@@ -166,9 +170,7 @@ if (
         }
 
         if (!image) {
-          const imageMatch = item.match(
-            /<image[^>]*>([\s\S]*?)<\/image>/i
-          );
+          const imageMatch = item.match(/<image[^>]*>([\s\S]*?)<\/image>/i);
 
           if (imageMatch && imageMatch[1]) {
             image = normalizeText(imageMatch[1]);
@@ -180,9 +182,7 @@ if (
         }
 
         if (!image) {
-          const urlMatch = item.match(
-            /<url[^>]*>([\s\S]*?)<\/url>/i
-          );
+          const urlMatch = item.match(/<url[^>]*>([\s\S]*?)<\/url>/i);
 
           if (urlMatch && urlMatch[1]) {
             image = normalizeText(urlMatch[1]);
@@ -198,11 +198,29 @@ if (
             "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1200&auto=format&fit=crop";
         }
 
-        const description =
-          getTag("description") ||
-          getTag("Description") ||
-          getTag("desc") ||
-          `${type} in ${location}`;
+        const rawProject =
+          getTag("project") ||
+          getTag("Project") ||
+          getTag("project_name") ||
+          getTag("development") ||
+          getTag("name") ||
+          rawTitle;
+
+        let projectName = normalizeProjectName(rawProject);
+
+        if (feed.developer === "Pafilia") {
+          const detectedProject = detectPafiliaProject(
+            rawTitle,
+            description,
+            image
+          );
+
+          if (detectedProject) {
+            projectName = detectedProject;
+          } else {
+            projectName = `${location} ${type}`;
+          }
+        }
 
         const bedrooms =
           getTag("beds") ||
@@ -211,7 +229,9 @@ if (
           "";
 
         const unitRef =
-          `${feed.code}-${location.slice(0, 3).toUpperCase()}-${type.slice(0, 3).toUpperCase()}-${index + 1}`;
+          `${feed.code}-${location.slice(0, 3).toUpperCase()}-${type
+            .slice(0, 3)
+            .toUpperCase()}-${index + 1}`;
 
         allUnits.push({
           unitRef,
