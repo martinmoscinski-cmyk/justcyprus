@@ -28,24 +28,36 @@ export default async function handler(req, res) {
   };
 
   const normalizeProjectName = (text) => {
-    return normalizeText(text)
-      .replace(/\s*-\s*Villa No\.?\s*\d+[A-Z]?/gi, "")
-      .replace(/\s*-\s*Apartment No\.?\s*\d+[A-Z]?/gi, "")
-      .replace(/\s*-\s*Unit No\.?\s*\d+[A-Z]?/gi, "")
-      .replace(/Villa No\.?\s*\d+[A-Z]?/gi, "")
-      .replace(/Apartment No\.?\s*\d+[A-Z]?/gi, "")
-      .replace(/Unit No\.?\s*\d+[A-Z]?/gi, "")
-      .replace(/\(Old\s*\d+\)/gi, "")
-      .replace(/Old\s*\d+/gi, "")
-      .replace(/\s*-\s*V\d+$/gi, "")
-      .replace(/\s*-\s*[A-Z]\d+$/gi, "")
-      .replace(/\s*Apartment\s*\d+[A-Z]?$/gi, "")
-      .replace(/\s*Apt\.?\s*\d+[A-Z]?$/gi, "")
-      .replace(/\/\d+$/g, "")
-      .replace(/([a-z])([A-Z])$/g, "$1")
-      .replace(/[^\w\s)]$/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
+  return normalizeText(text)
+
+    // usuwa wszystko typu:
+    // - Villa No. 12
+    // - Apartment No. 302
+    // - Maisonette No. 14
+    // - Semi Detached House No. 9
+    .replace(/\s*-\s*.*?No\.?\s*\d+[A-Z]?/gi, "")
+    .replace(/\s+.*?No\.?\s*\d+[A-Z]?/gi, "")
+
+    // usuwa Unico Designer Apartments No. 302
+    .replace(/\s*No\.?\s*\d+[A-Z]?$/gi, "")
+
+    // usuwa końcówki typu - V01 / - A10
+    .replace(/\s*-\s*V\d+$/gi, "")
+    .replace(/\s*-\s*[A-Z]\d+$/gi, "")
+
+    // usuwa /12
+    .replace(/\/\d+$/g, "")
+
+    // usuwa stare numery
+    .replace(/\(Old\s*\d+\)/gi, "")
+    .replace(/Old\s*\d+/gi, "")
+
+    // usuwa końcowe myślniki i śmieci
+    .replace(/[^\p{L}\p{N})]+$/gu, "")
+
+    .replace(/\s+/g, " ")
+    .trim();
+};
   };
 
   try {
