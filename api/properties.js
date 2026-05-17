@@ -28,18 +28,39 @@ export default async function handler(req, res) {
   };
 
   const normalizeProjectName = (text) => {
-  return normalizeText(text)
-    .replace(/\s*-\s*.*?No\.?\s*\d+[A-Z]?/gi, "")
-    .replace(/\s+.*?No\.?\s*\d+[A-Z]?/gi, "")
-    .replace(/\s*No\.?\s*\d+[A-Z]?$/gi, "")
+  let name = normalizeText(text);
+
+  // usuwa numery unitów
+  name = name
+    .replace(/\s*-\s*Villa No\.?\s*\d+[A-Z]?/gi, "")
+    .replace(/\s*-\s*Apartment No\.?\s*\d+[A-Z]?/gi, "")
+    .replace(/\s*-\s*Maisonette No\.?\s*\d+[A-Z]?/gi, "")
+    .replace(/\s*-\s*Semi Detached House No\.?\s*\d+[A-Z]?/gi, "")
+    .replace(/\s*-\s*Unit No\.?\s*\d+[A-Z]?/gi, "")
+
+    .replace(/Villa No\.?\s*\d+[A-Z]?/gi, "")
+    .replace(/Apartment No\.?\s*\d+[A-Z]?/gi, "")
+    .replace(/Maisonette No\.?\s*\d+[A-Z]?/gi, "")
+    .replace(/Semi Detached House No\.?\s*\d+[A-Z]?/gi, "")
+    .replace(/Unit No\.?\s*\d+[A-Z]?/gi, "")
+
+    // usuwa stare suffixy
     .replace(/\s*-\s*V\d+$/gi, "")
     .replace(/\s*-\s*[A-Z]\d+$/gi, "")
     .replace(/\/\d+$/g, "")
+
+    // old
     .replace(/\(Old\s*\d+\)/gi, "")
     .replace(/Old\s*\d+/gi, "")
-    .replace(/[^\w\s)]$/g, "")
+
+    // końcowe myślniki
+    .replace(/\s*[-–—]+\s*$/g, "")
+
+    // wielokrotne spacje
     .replace(/\s+/g, " ")
     .trim();
+
+  return name;
 };
 
   try {
