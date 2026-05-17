@@ -16,8 +16,6 @@
 
 <body>
 
-  <!-- NAVBAR -->
-
   <header class="navbar">
     <div class="container nav-wrap">
 
@@ -40,9 +38,6 @@
     </div>
   </header>
 
-
-  <!-- HERO -->
-
   <section class="hero fade-up">
 
     <div class="container hero-content">
@@ -50,30 +45,30 @@
       <div class="hero-text">
 
         <h1>
-  Buy property in Cyprus —
-  <span>made simple.</span>
-</h1>
+          Buy property in Cyprus —
+          <span>made simple.</span>
+        </h1>
 
         <p>
-          Apartments and villas from selected developers in Cyprus’ most desirable coastal areas.
-          No pressure. No commission.
+          New-build apartments and villas from selected developers in Cyprus’ most desirable coastal areas.
+          No buyer commission. No pressure. Just clear options.
         </p>
 
         <div class="hero-buttons">
           <a href="#properties" class="primary-btn">
-            View properties
+            Search properties
           </a>
 
           <a href="https://wa.me/447459899618" class="secondary-btn">
             WhatsApp us
           </a>
         </div>
-<p class="mini-note">
-  No agents. No buyer commission. Direct developer options.
-</p>
+
+        <p class="mini-note">
+          Direct developer options. Simple communication. Selected new-build projects.
+        </p>
 
       </div>
-
 
       <div class="hero-card">
 
@@ -87,7 +82,7 @@
           </h3>
 
           <p>
-            Apartments and villas from selected developers in Paphos, Larnaca, Limassol and coastal areas.
+            Apartments and villas from selected developers in Paphos, Larnaca, Limassol and other coastal areas.
           </p>
         </div>
 
@@ -97,79 +92,85 @@
 
   </section>
 
-
-  <!-- TRUST -->
-
   <section class="trust">
 
     <div class="container trust-grid">
 
-      <div class="trust-card">
-        No commission
-      </div>
-
-      <div class="trust-card">
-        Direct developer pricing
-      </div>
-
-      <div class="trust-card">
-        Modern new-build homes
-      </div>
-
-      <div class="trust-card">
-        Simple communication
-      </div>
+      <div class="trust-card">No buyer commission</div>
+      <div class="trust-card">Direct developer pricing</div>
+      <div class="trust-card">Live project availability</div>
+      <div class="trust-card">Simple WhatsApp enquiry</div>
 
     </div>
 
   </section>
-  <!-- PROPERTY SEARCH -->
 
-<section class="property-search">
+  <section class="properties" id="properties">
 
-  <div class="container">
+    <div class="container">
 
-    <form class="search-panel" id="propertySearch">
+      <div class="section-title">
+        <h2>Find your property in Cyprus</h2>
+        <p>
+          Search live projects from selected developers and request details directly.
+        </p>
+      </div>
 
-      <select id="location">
-        <option value="">Location</option>
-        <option value="Paphos">Paphos</option>
-        <option value="Larnaca">Larnaca</option>
-        <option value="Limassol">Limassol</option>
-      </select>
+      <form class="search-panel" id="propertySearch">
 
-      <select id="type">
-        <option value="">Property type</option>
-        <option value="Apartment">Apartment</option>
-        <option value="Villa">Villa</option>
-        <option value="Townhouse">Townhouse</option>
-      </select>
+        <select id="location">
+          <option value="">Location</option>
+          <option value="Paphos">Paphos</option>
+          <option value="Pafos">Pafos</option>
+          <option value="Larnaca">Larnaca</option>
+          <option value="Limassol">Limassol</option>
+          <option value="Tala">Tala</option>
+          <option value="Kissonerga">Kissonerga</option>
+          <option value="Chloraka">Chloraka</option>
+        </select>
 
-      <select id="budget">
-        <option value="">Budget</option>
-        <option value="250000">Up to €250k</option>
-        <option value="500000">Up to €500k</option>
-        <option value="1000000">Up to €1M</option>
-      </select>
+        <select id="type">
+          <option value="">Property type</option>
+          <option value="Apartment">Apartment</option>
+          <option value="Villa">Villa</option>
+          <option value="Townhouse">Townhouse</option>
+          <option value="Semi Detached">Semi Detached</option>
+        </select>
 
-      <button type="submit">
-        Search properties
-      </button>
+        <select id="budget">
+          <option value="">Budget</option>
+          <option value="250000">Up to €250k</option>
+          <option value="500000">Up to €500k</option>
+          <option value="1000000">Up to €1M</option>
+          <option value="2000000">Up to €2M</option>
+        </select>
 
-    </form>
+        <button type="submit">
+          Search properties
+        </button>
 
-  </div>
+      </form>
 
-</section>
-<div class="container search-results-wrap">
+      <div class="results-top-bar">
 
-  <div class="property-grid" id="results">
+        <div id="resultsCount" class="results-count"></div>
 
-  </div>
+        <select id="sortSelect" class="sort-select">
+          <option value="default">Sort by</option>
+          <option value="price-low">Price: Low to High</option>
+          <option value="price-high">Price: High to Low</option>
+          <option value="name">Project Name</option>
+        </select>
 
-</div>
+      </div>
 
-  <!-- HOW IT WORKS -->
+      <div class="property-grid" id="results"></div>
+
+      <div id="pagination" class="pagination"></div>
+
+    </div>
+
+  </section>
 
   <section class="steps" id="how">
 
@@ -177,21 +178,14 @@
 
       <div class="section-title">
         <h2>How it works</h2>
-
-        <p>
-          A simple way to find the right property in Cyprus.
-        </p>
+        <p>A simple way to find the right property in Cyprus.</p>
       </div>
 
       <div class="steps-grid">
 
         <div class="step" data-step="01">
           <div class="step-icon">⌂</div>
-
-          <h3>
-            Tell us what you need
-          </h3>
-
+          <h3>Tell us what you need</h3>
           <p>
             Share your budget, preferred location and reason for buying — investment, holiday home or relocation.
           </p>
@@ -199,11 +193,7 @@
 
         <div class="step" data-step="02">
           <div class="step-icon">✓</div>
-
-          <h3>
-            We shortlist projects
-          </h3>
-
+          <h3>We shortlist projects</h3>
           <p>
             We send you suitable new-build options from selected developers in Cyprus.
           </p>
@@ -211,11 +201,7 @@
 
         <div class="step" data-step="03">
           <div class="step-icon">→</div>
-
-          <h3>
-            You buy directly
-          </h3>
-
+          <h3>You buy directly</h3>
           <p>
             You deal directly with the developer. No buyer commission, no pressure, no unnecessary confusion.
           </p>
@@ -227,117 +213,15 @@
 
   </section>
 
-
-  <!-- PROPERTIES -->
-
-  <section class="properties" id="properties">
-
-    <div class="container">
-
-      <div class="section-title">
-        <h2>Featured properties</h2>
-
-        <p>
-          Carefully selected new-build homes in Cyprus.
-        </p>
-      </div>
-
-      <div class="property-grid">
-
-        <div class="property-card">
-          <img src="images/property-1.jpg" alt="Property in Paphos">
-
-          <div class="property-body">
-            <small>Paphos</small>
-
-            <h3>
-              Modern sea-view apartments
-            </h3>
-
-            <p>
-              Contemporary apartments close to the coast, city centre and key amenities.
-            </p>
-
-            <div class="property-meta">
-              <div class="price">From €285,000</div>
-
-              <a href="https://wa.me/447459899618" class="card-btn">
-                Enquire
-              </a>
-            </div>
-          </div>
-        </div>
-
-
-        <div class="property-card">
-          <img src="images/property-2.jpg" alt="Villa in Cyprus">
-
-          <div class="property-body">
-            <small>Peyia / Paphos</small>
-
-            <h3>
-              Private villas with pool
-            </h3>
-
-            <p>
-              Spacious villas designed for lifestyle buyers, relocation and long-term value.
-            </p>
-
-            <div class="property-meta">
-              <div class="price">From €450,000</div>
-
-              <a href="https://wa.me/447459899618" class="card-btn">
-                Enquire
-              </a>
-            </div>
-          </div>
-        </div>
-
-
-        <div class="property-card">
-          <img src="images/property-3.jpg" alt="Apartment in Larnaca">
-
-          <div class="property-body">
-            <small>Larnaca</small>
-
-            <h3>
-              City apartments near the sea
-            </h3>
-
-            <p>
-              Modern apartments with strong lifestyle appeal and practical payment stages.
-            </p>
-
-            <div class="property-meta">
-              <div class="price">From €199,000</div>
-
-              <a href="https://wa.me/447459899618" class="card-btn">
-                Enquire
-              </a>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-    </div>
-
-  </section>
-
-
-  <!-- WHY -->
-
   <section class="why" id="why">
 
     <div class="container why-wrap">
 
       <div>
-        <h2>
-          Why buyers choose Just Cyprus
-        </h2>
+        <h2>Why buyers choose Just Cyprus</h2>
 
         <p>
-          We keep the process simple. You tell us what you are looking for, we send you suitable developer options, and you decide what makes sense.
+          We keep the process simple. You tell us what you are looking for, we show you suitable developer options, and you decide what makes sense.
         </p>
       </div>
 
@@ -365,16 +249,11 @@
 
   </section>
 
-
-  <!-- CTA -->
-
   <section class="cta" id="contact">
 
     <div class="container">
 
-      <h2>
-        Ready to buy in Cyprus?
-      </h2>
+      <h2>Ready to buy in Cyprus?</h2>
 
       <p>
         Send us your budget and preferred location. We’ll show you suitable options.
@@ -387,9 +266,6 @@
     </div>
 
   </section>
-
-
-  <!-- FOOTER -->
 
   <footer class="footer">
 
@@ -409,7 +285,6 @@
     </div>
 
   </footer>
-
 
   <script src="script.js"></script>
 
