@@ -20,6 +20,9 @@ export default async function handler(req, res) {
     }
   ];
 
+  const fallbackImage =
+    "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1200&auto=format&fit=crop";
+
   const normalizeText = (text) => {
     return String(text || "")
       .normalize("NFKC")
@@ -36,19 +39,17 @@ export default async function handler(req, res) {
   };
 
   const normalizeProjectName = (text) => {
-    let name = normalizeText(text);
-
-    name = name
-      .replace(/\s*-\s*Villa No\.?\s*\d+[A-Z]?/gi, "")
-      .replace(/\s*-\s*Apartment No\.?\s*\d+[A-Z]?/gi, "")
-      .replace(/\s*-\s*Maisonette No\.?\s*\d+[A-Z]?/gi, "")
-      .replace(/\s*-\s*Semi Detached House No\.?\s*\d+[A-Z]?/gi, "")
-      .replace(/\s*-\s*Unit No\.?\s*\d+[A-Z]?/gi, "")
-      .replace(/Villa No\.?\s*\d+[A-Z]?/gi, "")
-      .replace(/Apartment No\.?\s*\d+[A-Z]?/gi, "")
-      .replace(/Maisonette No\.?\s*\d+[A-Z]?/gi, "")
-      .replace(/Semi Detached House No\.?\s*\d+[A-Z]?/gi, "")
-      .replace(/Unit No\.?\s*\d+[A-Z]?/gi, "")
+    return normalizeText(text)
+      .replace(/\s*-\s*Villa No\.?\s*[\d/]+[A-Z]?/gi, "")
+      .replace(/\s*-\s*Apartment No\.?\s*[\d/]+[A-Z]?/gi, "")
+      .replace(/\s*-\s*Maisonette No\.?\s*[\d/]+[A-Z]?/gi, "")
+      .replace(/\s*-\s*Semi Detached House No\.?\s*[\d/]+[A-Z]?/gi, "")
+      .replace(/\s*-\s*Unit No\.?\s*[\d/]+[A-Z]?/gi, "")
+      .replace(/Villa No\.?\s*[\d/]+[A-Z]?/gi, "")
+      .replace(/Apartment No\.?\s*[\d/]+[A-Z]?/gi, "")
+      .replace(/Maisonette No\.?\s*[\d/]+[A-Z]?/gi, "")
+      .replace(/Semi Detached House No\.?\s*[\d/]+[A-Z]?/gi, "")
+      .replace(/Unit No\.?\s*[\d/]+[A-Z]?/gi, "")
       .replace(/\s*-\s*V\d+$/gi, "")
       .replace(/\s*-\s*[A-Z]\d+$/gi, "")
       .replace(/\/\d+$/g, "")
@@ -57,8 +58,16 @@ export default async function handler(req, res) {
       .replace(/\s*[-–—]+\s*$/g, "")
       .replace(/\s+/g, " ")
       .trim();
+  };
 
-    return name;
+  const getTagFromItem = (item, tag) => {
+    const match = item.match(
+      new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i")
+    );
+
+    return match
+      ? normalizeText(match[1].replace(/<!\[CDATA\[|\]\]>/g, ""))
+      : "";
   };
 
   const detectPafiliaProject = (rawTitle, description, image) => {
@@ -90,9 +99,27 @@ export default async function handler(req, res) {
     return "";
   };
 
+  const parsePrice = (priceText) => {
+    const cleanPrice = normalizeText(priceText)
+      .replace(/&#x20AC;/g, "")
+      .replace(/€/g, "")
+      .replace(/,/g, "")
+      .replace(/\s/g, "")
+      .trim();
+
+    let price = Number(cleanPrice) || 0;
+
+    if (price < 50000 || price > 10000000) {
+      price = 0;
+    }
+
+    return price;
+  };
+
   try {
     const allUnits = [];
 
+    // XML feeds: Aristo + Pafilia
     for (const feed of feeds) {
       const response = await fetch(feed.url, {
         headers: {
@@ -108,15 +135,7 @@ export default async function handler(req, res) {
         [];
 
       items.forEach((item, index) => {
-        const getTag = (tag) => {
-          const match = item.match(
-            new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i")
-          );
-
-          return match
-            ? normalizeText(match[1].replace(/<!\[CDATA\[|\]\]>/g, ""))
-            : "";
-        };
+        const getTag = (tag) => getTagFromItem(item, tag);
 
         const location =
           getTag("town") ||
@@ -137,38 +156,20 @@ export default async function handler(req, res) {
           getTag("Title") ||
           `${location} ${type}`;
 
-        const priceText =
-          getTag("Price") ||
-          getTag("price") ||
-          "";
-
-        const cleanPrice = priceText
-          .replace(/&#x20AC;/g, "")
-          .replace(/€/g, "")
-          .replace(/,/g, "")
-          .replace(/\s/g, "")
-          .trim();
-
-        let price = Number(cleanPrice) || 0;
-
-        if (price < 50000 || price > 10000000) {
-          price = 0;
-        }
-
         const description =
           getTag("description") ||
           getTag("Description") ||
           getTag("desc") ||
           `${type} in ${location}`;
 
-        const rawImage =
+        let image =
           getTag("image") ||
           getTag("IMAGE_URL") ||
           getTag("image_url") ||
           getTag("picture") ||
           "";
 
-        let image = rawImage
+        image = image
           .replace(/"/g, "")
           .replace(/<[^>]*>/g, "")
           .trim();
@@ -202,9 +203,15 @@ export default async function handler(req, res) {
         }
 
         if (!image) {
-          image =
-            "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1200&auto=format&fit=crop";
+          image = fallbackImage;
         }
+
+        const priceText =
+          getTag("Price") ||
+          getTag("price") ||
+          "";
+
+        const price = parsePrice(priceText);
 
         const rawProject =
           getTag("project") ||
@@ -223,11 +230,7 @@ export default async function handler(req, res) {
             image
           );
 
-          if (detectedProject) {
-            projectName = detectedProject;
-          } else {
-            projectName = `${location} ${type}`;
-          }
+          projectName = detectedProject || `${location} ${type}`;
         }
 
         const bedrooms =
@@ -257,66 +260,86 @@ export default async function handler(req, res) {
         });
       });
     }
-for (const source of htmlSources) {
-  const response = await fetch(source.url, {
-    headers: {
-      "User-Agent": "Mozilla/5.0"
+
+    // HTML source: Domenica live parser
+    for (const source of htmlSources) {
+      const response = await fetch(source.url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0"
+        }
+      });
+
+      const html = await response.text();
+
+      const text = normalizeText(
+        html
+          .replace(/<script[\s\S]*?<\/script>/gi, " ")
+          .replace(/<style[\s\S]*?<\/style>/gi, " ")
+          .replace(/<[^>]*>/g, " ")
+      );
+
+      const chunks = text
+        .split(/(?=Price range:|Area:|Type:|Off Plan|Under Construction|Completed|For Sale)/gi)
+        .join(" ")
+        .split(/(?=[A-Z][A-Za-z0-9'’&.\s-]{2,50}\s+Area:)/g);
+
+      let index = 0;
+
+      chunks.forEach((chunk) => {
+        const cleanChunk = normalizeText(chunk);
+
+        if (!cleanChunk.toLowerCase().includes("price range")) {
+          return;
+        }
+
+        const priceMatch = cleanChunk.match(/Price range:\s*€\s*([\d.,]+)\s*k?/i);
+        const areaMatch = cleanChunk.match(/Area:\s*([^]*?)\s*Type:/i);
+        const typeMatch = cleanChunk.match(/Type:\s*([^]*?)(?:Off Plan|Under Construction|For Sale|Completed|Price range)/i);
+
+        if (!priceMatch) {
+          return;
+        }
+
+        let priceText = priceMatch[1].replace(/,/g, "").trim();
+        let price = Number(priceText) || 0;
+
+        if (/k/i.test(priceMatch[0])) {
+          price = price * 1000;
+        }
+
+        if (price < 50000 || price > 10000000) {
+          return;
+        }
+
+        let location = areaMatch ? normalizeText(areaMatch[1]) : "Paphos";
+        let type = typeMatch ? normalizeText(typeMatch[1]) : "Property";
+
+        const beforeArea = cleanChunk.split("Area:")[0] || "";
+        let title = normalizeProjectName(beforeArea);
+
+        if (!title || title.length < 3 || title.length > 80) {
+          title = `Domenica ${type}`;
+        }
+
+        index++;
+
+        allUnits.push({
+          unitRef: `${source.code}-PAF-PRO-${index}`,
+          projectName: title,
+          unitTitle: title,
+          location,
+          type,
+          price,
+          image: fallbackImage,
+          images: [fallbackImage],
+          description: `${title} is a selected Domenica Group development in ${location}. Contact us for current availability, layouts and details.`,
+          bedrooms: "",
+          developer: source.developer,
+          source: source.url
+        });
+      });
     }
-  });
 
-  const html = await response.text();
-
-  const cards = html.match(/<a[\s\S]*?<\/a>/gi) || [];
-
-  cards.forEach((card, index) => {
-    const text = normalizeText(
-      card.replace(/<[^>]*>/g, " ")
-    );
-
-    if (
-      !text ||
-      text.length < 20 ||
-      !text.toLowerCase().includes("paphos")
-    ) {
-      return;
-    }
-
-    const hrefMatch = card.match(/href=["']([^"']+)["']/i);
-    const imgMatch = card.match(/<img[^>]+src=["']([^"']+)["']/i);
-
-    let image = imgMatch ? imgMatch[1] : "";
-
-    if (image.startsWith("/")) {
-      image = `https://www.domenicagroup.com${image}`;
-    }
-
-    if (!image) {
-      image =
-        "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1200&auto=format&fit=crop";
-    }
-
-    const title =
-      text.split(" ").slice(0, 4).join(" ") ||
-      "Domenica Project";
-
-    const unitRef = `${source.code}-PAF-PRO-${index + 1}`;
-
-    allUnits.push({
-      unitRef,
-      projectName: normalizeProjectName(title),
-      unitTitle: title,
-      location: "Paphos",
-      type: "Property",
-      price: 0,
-      image,
-      images: [image],
-      description: `${title} is a selected development in Paphos. Contact us for current availability, layouts and details.`,
-      bedrooms: "",
-      developer: source.developer,
-      source: source.url
-    });
-  });
-}
     const grouped = {};
 
     allUnits.forEach((unit) => {
@@ -362,7 +385,9 @@ for (const source of htmlSources) {
       });
     });
 
-    const projects = Object.values(grouped);
+    const projects = Object.values(grouped).filter(
+      (project) => Number(project.priceFrom || 0) > 0
+    );
 
     res.status(200).json({
       success: true,
