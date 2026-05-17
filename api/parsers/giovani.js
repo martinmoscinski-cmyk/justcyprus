@@ -18,18 +18,9 @@ const cleanTitle = (text) => {
     .trim();
 };
 
-const detectLocation = (text) => {
-  const value = String(text || "").toLowerCase();
-
-  if (value.includes("paralimni")) return "Paralimni";
-  if (value.includes("protaras")) return "Protaras";
-  if (value.includes("pernera")) return "Pernera";
-  if (value.includes("kapparis")) return "Kapparis";
-  if (value.includes("ayia napa") || value.includes("agia napa")) return "Ayia Napa";
-  if (value.includes("cape greco")) return "Cape Greco";
-  if (value.includes("larnaca")) return "Larnaca";
-
-  return "";
+const getCity = (text) => {
+  const match = text.match(/City:\s*([A-Za-z\s-]+)\s+Zip:/i);
+  return match ? normalizeText(match[1]) : "";
 };
 
 export async function getGiovaniProjects() {
@@ -41,28 +32,21 @@ export async function getGiovaniProjects() {
 
   const html = await response.text();
 
-  const cardMatches = [
-    ...html.matchAll(
-      /€\s*([\d,]+)\s*\+?\s*VAT[\s\S]*?<a[^>]+href=["']([^"']+)["'][^>]*>\s*([^<]*?)\s*<\/a>[\s\S]*?<a[^>]+href=["']([^"']+)["'][^>]*>\s*details\s*<\/a>/gi
-    )
-  ];
+  const links = [
+    ...html.matchAll(/href=["']([^"']*\/property\/[^"']+)["']/gi)
+  ]
+    .map((match) => absoluteUrl(match[1]))
+    .filter((url) => url.includes("giovani.cy/property/"));
+
+  const uniqueLinks = [...new Set(links)].slice(0, 40);
 
   const units = [];
 
-  for (let index = 0; index < cardMatches.length; index++) {
-    const match = cardMatches[index];
-
-    const price =
-      Number(String(match[1]).replace(/,/g, "")) || 0;
-
-    if (price < 50000 || price > 10000000) continue;
-
-    const detailUrl = absoluteUrl(match[4] || match[2]);
-    const rawTitle = normalizeText(match[3]);
-    const title = cleanTitle(rawTitle) || "Giovani Property";
+  for (let index = 0; index < uniqueLinks.length; index++) {
+    const link = uniqueLinks[index];
 
     try {
-      const detailResponse = await fetch(detailUrl, {
+      const detailResponse = await fetch(link, {
         headers: {
           "User-Agent": "Mozilla/5.0"
         }
@@ -77,19 +61,23 @@ export async function getGiovaniProjects() {
           .replace(/<[^>]*>/g, " ")
       );
 
-      let location = "";
+      const titleMatch = detailText.match(/#\s*([A-Z0-9][A-Za-z0-9\s.'’&-]{3,100})\s+Available/i);
+      const priceMatch = detailText.match(/Price:\s*€\s*([\d,]+)/i);
 
-      const cityMatch = detailText.match(/City:\s*([A-Za-z\s-]+)\s+(?:Zip:|Country:|Address:|Property)/i);
+      const title = cleanTitle(titleMatch?.[1] || "Giovani Property");
 
-      if (cityMatch?.[1]) {
-        location = normalizeText(cityMatch[1]);
+      const price =
+        Number(String(priceMatch?.[1] || "").replace(/,/g, "")) || 0;
+
+      if (price < 50000 || price > 10000000) {
+        continue;
       }
+
+      const location = getCity(detailText);
 
       if (!location) {
-        location = detectLocation(detailText) || detectLocation(detailUrl);
+        continue;
       }
-
-      if (!location) continue;
 
       const lower = `${title} ${detailText}`.toLowerCase();
 
@@ -124,7 +112,7 @@ export async function getGiovaniProjects() {
         description: `${title} is a selected Giovani development in ${location}. Contact us for current availability, layouts and details.`,
         bedrooms: "",
         developer: "Giovani",
-        source: detailUrl
+        source: link
       });
 
     } catch (error) {
