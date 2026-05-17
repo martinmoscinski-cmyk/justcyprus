@@ -299,21 +299,31 @@ console.log("DOMENICA SAMPLE:", text.slice(0, 2000));
     if (hasK) price = price * 1000;
 
     if (price < 50000 || price > 10000000) return;
+const imageMatches = [
+  ...html.matchAll(/<img[^>]+src="([^"]+)"/gi)
+];
 
+let realImage =
+  imageMatches[index]?.[1] || fallbackImage;
+
+if (realImage.startsWith("/")) {
+  realImage =
+    `https://www.domenicagroup.com${realImage}`;
+}
     allUnits.push({
-      unitRef: `${source.code}-PAF-PRO-${index + 1}`,
-      projectName: title,
-      unitTitle: title,
-      location,
-      type,
-      price,
-      image: fallbackImage,
-      images: [fallbackImage],
-      description: `${title} is a selected Domenica Group development in ${location}. Contact us for current availability, layouts and details.`,
-      bedrooms: "",
-      developer: source.developer,
-      source: source.url
-    });
+  unitRef: `${source.code}-PAF-PRO-${index + 1}`,
+  projectName: title,
+  unitTitle: title,
+  location,
+  type,
+  price,
+  image: realImage,
+  images: [realImage],
+  description: `${title} is a selected Domenica Group development in ${location}. Contact us for current availability, layouts and details.`,
+  bedrooms: "",
+  developer: source.developer,
+  source: source.url
+});
   });
 }
 
