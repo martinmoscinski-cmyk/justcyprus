@@ -120,7 +120,6 @@
 
         <select id="location">
           <option value="">Location</option>
-          <option value="Paphos">Paphos</option>
           <option value="Pafos">Pafos</option>
           <option value="Larnaca">Larnaca</option>
           <option value="Limassol">Limassol</option>
@@ -138,12 +137,28 @@
         </select>
 
         <select id="budget">
-          <option value="">Budget</option>
-          <option value="250000">Up to €250k</option>
-          <option value="500000">Up to €500k</option>
-          <option value="1000000">Up to €1M</option>
-          <option value="2000000">Up to €2M</option>
-        </select>
+  <option value="">Budget</option>
+
+  <option value="0-250000">
+    €0 – €250k
+  </option>
+
+  <option value="250000-500000">
+    €250k – €500k
+  </option>
+
+  <option value="500000-1000000">
+    €500k – €1M
+  </option>
+
+  <option value="1000000-2000000">
+    €1M – €2M
+  </option>
+
+  <option value="2000000-999999999">
+    €2M+
+  </option>
+</select>
 
         <button type="submit">
           Search properties
@@ -166,7 +181,13 @@
 
       <div class="property-grid" id="results"></div>
 
-      <div id="pagination" class="pagination"></div>
+      <div class="container search-results-wrap">
+
+  ...
+
+  <div id="pagination" class="pagination"></div>
+
+</div>
 
     </div>
 

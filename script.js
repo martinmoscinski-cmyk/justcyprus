@@ -20,6 +20,11 @@ function cleanText(text) {
     .replace(/\s*-\s*$/g, "")
     .trim();
 }
+function normalizeLocation(text) {
+  return cleanText(text)
+    .toLowerCase()
+    .replaceAll("paphos", "pafos");
+}
 
 function makePrice(price) {
   const value = Number(price || 0);
@@ -153,9 +158,12 @@ document.addEventListener("DOMContentLoaded", () => {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const location = document.getElementById("location").value.toLowerCase();
+    const location = normalizeLocation(
+  document.getElementById("location").value
+);
     const type = document.getElementById("type").value.toLowerCase();
-    const budget = Number(document.getElementById("budget").value);
+    const budgetValue =
+  document.getElementById("budget").value;
 
     const projects = await fetchProjects();
     const results = document.getElementById("results");
@@ -165,7 +173,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (pagination) pagination.innerHTML = "";
 
     const matched = projects.filter((project) => {
-      const projectLocation = cleanText(project.location).toLowerCase();
+      const projectLocation = normalizeLocation(project.location);
       const projectType = cleanText(project.type).toLowerCase();
       const projectPrice = Number(project.priceFrom || 0);
 
@@ -175,9 +183,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const locationMatch = !location || projectLocation.includes(location);
       const typeMatch = !type || projectType.includes(type);
-      const budgetMatch = !budget || projectPrice <= budget;
+      let matchesBudget = true;
 
-      return locationMatch && typeMatch && budgetMatch;
+if (budgetValue) {
+
+  const [minBudget, maxBudget] =
+    budgetValue.split("-").map(Number);
+
+  matchesBudget =
+    projectPrice >= minBudget &&
+    projectPrice <= maxBudget;
+}
+
+      return locationMatch && typeMatch && matchesBudget;
     });
 
     if (matched.length === 0) {

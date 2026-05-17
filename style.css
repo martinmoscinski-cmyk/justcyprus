@@ -1208,3 +1208,42 @@ nav a:hover{
   background:linear-gradient(135deg,#ff5a1f,#ff2f63);
   color:white;
 }
+.results-top-bar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin:20px 0 35px;
+  gap:20px;
+  flex-wrap:wrap;
+}
+
+.results-count{
+  font-size:14px;
+  color:#888;
+  font-weight:500;
+}
+
+.sort-select{
+  height:48px;
+  padding:0 18px;
+  border-radius:14px;
+  border:1px solid #ececec;
+  background:#fff;
+  font-size:14px;
+  font-weight:600;
+  font-family:inherit;
+  color:#222;
+  cursor:pointer;
+  min-width:220px;
+  box-shadow:0 4px 20px rgba(0,0,0,0.03);
+}
+
+.sort-select:focus{
+  outline:none;
+  border-color:#ff5c72;
+}
+.property-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(340px,1fr));
+  gap:34px;
+}
