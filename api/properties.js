@@ -72,18 +72,44 @@ export default async function handler(req, res) {
           .replace(/\s+-\s+$/g, "")
           .trim() || rawTitle;
 
-        const rawPrice =
-          getTag("price")
-            .replace(/€/g, "")
-            .replace(/,/g, "")
-            .replace(/\s/g, "");
+        const priceText =
+  getTag("price") ||
+  getTag("PRICE") ||
+  getTag("Price") ||
+  getTag("prices") ||
+  getTag("from_price") ||
+  getTag("price_from") ||
+  getTag("minimum_price") ||
+  getTag("min_price") ||
+  getTag("unit_price") ||
+  getTag("asking_price") ||
+  getTag("askingPrice") ||
+  getTag("sale_price") ||
+  getTag("salePrice") ||
+  getTag("current_price") ||
+  getTag("value") ||
+  "";
 
-        let price =
-          Number(rawPrice) || 0;
+const rawPrice =
+  priceText
+    .replace(/€/g, "")
+    .replace(/,/g, "")
+    .replace(/\s/g, "")
+    .replace(/[^\d]/g, "");
 
-        if (price > 10000000) {
-          price = Math.round(price / 100);
-        }
+let price =
+  Number(rawPrice) || 0;
+if (!price) {
+  console.log("NO PRICE FOUND:", {
+    developer: feed.developer,
+    title: rawTitle,
+    sample: item.slice(0, 500)
+  });
+}
+
+if (price > 10000000) {
+  price = Math.round(price / 100);
+}
 
         const rawImage =
           getTag("image") ||
