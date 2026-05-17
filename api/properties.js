@@ -262,83 +262,59 @@ export default async function handler(req, res) {
     }
 
     // HTML source: Domenica live parser
-    for (const source of htmlSources) {
-      const response = await fetch(source.url, {
-        headers: {
-          "User-Agent": "Mozilla/5.0"
-        }
-      });
+for (const source of htmlSources) {
+  const response = await fetch(source.url, {
+    headers: { "User-Agent": "Mozilla/5.0" }
+  });
 
-      const html = await response.text();
+  const html = await response.text();
 
-      const text = normalizeText(
-        html
-          .replace(/<script[\s\S]*?<\/script>/gi, " ")
-          .replace(/<style[\s\S]*?<\/style>/gi, " ")
-          .replace(/<[^>]*>/g, " ")
-      );
+  const text = normalizeText(
+    html
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]*>/g, " ")
+  );
 
-      const chunks = text
-        .split(/(?=Price range:|Area:|Type:|Off Plan|Under Construction|Completed|For Sale)/gi)
-        .join(" ")
-        .split(/(?=[A-Z][A-Za-z0-9'’&.\s-]{2,50}\s+Area:)/g);
+  const matches = [...text.matchAll(
+    /([A-Z][A-Za-z0-9'’&.\s-]{2,60})\s+([A-Za-z,\s]+Pafos)\s+Area:\s*([^]*?)\s+Type:\s*([^]*?)\s+(?:Off Plan|Under Construction|For Sale|Completed)\s+Price range:\s*€\s*([\d.,]+)\s*k?/gi
+  )];
 
-      let index = 0;
+console.log("DOMENICA MATCHES:", matches.length);
+console.log("DOMENICA SAMPLE:", text.slice(0, 2000));
 
-      chunks.forEach((chunk) => {
-        const cleanChunk = normalizeText(chunk);
+  matches.forEach((match, index) => {
+    const title = normalizeProjectName(match[1]);
+    const location = normalizeText(match[2]);
+    const type = normalizeText(match[4]);
+    const hasK = /k/i.test(match[0]);
 
-        if (!cleanChunk.toLowerCase().includes("price range")) {
-          return;
-        }
+    let price = Number(
+      String(match[5])
+        .replace(/,/g, "")
+        .replace(/\s/g, "")
+    ) || 0;
 
-        const priceMatch = cleanChunk.match(/Price range:\s*€\s*([\d.,]+)\s*k?/i);
-        const areaMatch = cleanChunk.match(/Area:\s*([^]*?)\s*Type:/i);
-        const typeMatch = cleanChunk.match(/Type:\s*([^]*?)(?:Off Plan|Under Construction|For Sale|Completed|Price range)/i);
+    if (hasK) price = price * 1000;
 
-        if (!priceMatch) {
-          return;
-        }
+    if (price < 50000 || price > 10000000) return;
 
-        let priceText = priceMatch[1].replace(/,/g, "").trim();
-        let price = Number(priceText) || 0;
-
-        if (/k/i.test(priceMatch[0])) {
-          price = price * 1000;
-        }
-
-        if (price < 50000 || price > 10000000) {
-          return;
-        }
-
-        let location = areaMatch ? normalizeText(areaMatch[1]) : "Paphos";
-        let type = typeMatch ? normalizeText(typeMatch[1]) : "Property";
-
-        const beforeArea = cleanChunk.split("Area:")[0] || "";
-        let title = normalizeProjectName(beforeArea);
-
-        if (!title || title.length < 3 || title.length > 80) {
-          title = `Domenica ${type}`;
-        }
-
-        index++;
-
-        allUnits.push({
-          unitRef: `${source.code}-PAF-PRO-${index}`,
-          projectName: title,
-          unitTitle: title,
-          location,
-          type,
-          price,
-          image: fallbackImage,
-          images: [fallbackImage],
-          description: `${title} is a selected Domenica Group development in ${location}. Contact us for current availability, layouts and details.`,
-          bedrooms: "",
-          developer: source.developer,
-          source: source.url
-        });
-      });
-    }
+    allUnits.push({
+      unitRef: `${source.code}-PAF-PRO-${index + 1}`,
+      projectName: title,
+      unitTitle: title,
+      location,
+      type,
+      price,
+      image: fallbackImage,
+      images: [fallbackImage],
+      description: `${title} is a selected Domenica Group development in ${location}. Contact us for current availability, layouts and details.`,
+      bedrooms: "",
+      developer: source.developer,
+      source: source.url
+    });
+  });
+}
 
     const grouped = {};
 
