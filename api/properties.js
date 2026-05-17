@@ -71,12 +71,17 @@ export default async function handler(req, res) {
           `${location} ${type}`;
 
         const projectName = rawTitle
-          .replace(/Villa No\.?\s*\d+/gi, "")
-          .replace(/Apartment No\.?\s*\d+/gi, "")
-          .replace(/Unit No\.?\s*\d+/gi, "")
-          .replace(/No\.?\s*\d+/gi, "")
-          .replace(/\s+-\s+$/g, "")
-          .trim() || rawTitle;
+  .replace(/\s*-\s*Villa No\.?\s*\d+/gi, "")
+  .replace(/\s*-\s*Apartment No\.?\s*\d+/gi, "")
+  .replace(/\s*-\s*Unit No\.?\s*\d+/gi, "")
+  .replace(/\s*-\s*No\.?\s*\d+/gi, "")
+  .replace(/Villa No\.?\s*\d+/gi, "")
+  .replace(/Apartment No\.?\s*\d+/gi, "")
+  .replace(/Unit No\.?\s*\d+/gi, "")
+  .replace(/No\.?\s*\d+/gi, "")
+  .replace(/\s+-\s+$/g, "")
+  .replace(/\s{2,}/g, " ")
+  .trim() || rawTitle;
 
         const priceText =
           getTag("Price") ||
