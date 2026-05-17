@@ -12,6 +12,14 @@ export default async function handler(req, res) {
     }
   ];
 
+  const htmlSources = [
+    {
+      developer: "Domenica",
+      code: "DOM",
+      url: "https://www.domenicagroup.com/portfolio"
+    }
+  ];
+
   const normalizeText = (text) => {
     return String(text || "")
       .normalize("NFKC")
@@ -249,7 +257,66 @@ export default async function handler(req, res) {
         });
       });
     }
+for (const source of htmlSources) {
+  const response = await fetch(source.url, {
+    headers: {
+      "User-Agent": "Mozilla/5.0"
+    }
+  });
 
+  const html = await response.text();
+
+  const cards = html.match(/<a[\s\S]*?<\/a>/gi) || [];
+
+  cards.forEach((card, index) => {
+    const text = normalizeText(
+      card.replace(/<[^>]*>/g, " ")
+    );
+
+    if (
+      !text ||
+      text.length < 20 ||
+      !text.toLowerCase().includes("paphos")
+    ) {
+      return;
+    }
+
+    const hrefMatch = card.match(/href=["']([^"']+)["']/i);
+    const imgMatch = card.match(/<img[^>]+src=["']([^"']+)["']/i);
+
+    let image = imgMatch ? imgMatch[1] : "";
+
+    if (image.startsWith("/")) {
+      image = `https://www.domenicagroup.com${image}`;
+    }
+
+    if (!image) {
+      image =
+        "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1200&auto=format&fit=crop";
+    }
+
+    const title =
+      text.split(" ").slice(0, 4).join(" ") ||
+      "Domenica Project";
+
+    const unitRef = `${source.code}-PAF-PRO-${index + 1}`;
+
+    allUnits.push({
+      unitRef,
+      projectName: normalizeProjectName(title),
+      unitTitle: title,
+      location: "Paphos",
+      type: "Property",
+      price: 0,
+      image,
+      images: [image],
+      description: `${title} is a selected development in Paphos. Contact us for current availability, layouts and details.`,
+      bedrooms: "",
+      developer: source.developer,
+      source: source.url
+    });
+  });
+}
     const grouped = {};
 
     allUnits.forEach((unit) => {
