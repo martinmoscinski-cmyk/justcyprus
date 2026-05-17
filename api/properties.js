@@ -39,26 +39,27 @@ export default async function handler(req, res) {
   };
 
   const normalizeProjectName = (text) => {
-    return normalizeText(text)
-      .replace(/\s*-\s*Villa No\.?\s*[\d/]+[A-Z]?/gi, "")
-      .replace(/\s*-\s*Apartment No\.?\s*[\d/]+[A-Z]?/gi, "")
-      .replace(/\s*-\s*Maisonette No\.?\s*[\d/]+[A-Z]?/gi, "")
-      .replace(/\s*-\s*Semi Detached House No\.?\s*[\d/]+[A-Z]?/gi, "")
-      .replace(/\s*-\s*Unit No\.?\s*[\d/]+[A-Z]?/gi, "")
-      .replace(/Villa No\.?\s*[\d/]+[A-Z]?/gi, "")
-      .replace(/Apartment No\.?\s*[\d/]+[A-Z]?/gi, "")
-      .replace(/Maisonette No\.?\s*[\d/]+[A-Z]?/gi, "")
-      .replace(/Semi Detached House No\.?\s*[\d/]+[A-Z]?/gi, "")
-      .replace(/Unit No\.?\s*[\d/]+[A-Z]?/gi, "")
-      .replace(/\s*-\s*V\d+$/gi, "")
-      .replace(/\s*-\s*[A-Z]\d+$/gi, "")
-      .replace(/\/\d+$/g, "")
-      .replace(/\(Old\s*\d+\)/gi, "")
-      .replace(/Old\s*\d+/gi, "")
-      .replace(/\s*[-–—]+\s*$/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
-  };
+  return normalizeText(text)
+    .replace(/\s*-\s*Villa No\.?\s*[\d/]+[A-Z]?/gi, "")
+    .replace(/\s*-\s*Apartment No\.?\s*[\d/]+[A-Z]?/gi, "")
+    .replace(/\s*-\s*Maisonette No\.?\s*[\d/]+[A-Z]?/gi, "")
+    .replace(/\s*-\s*Semi Detached House No\.?\s*[\d/]+[A-Z]?/gi, "")
+    .replace(/\s*-\s*Unit No\.?\s*[\d/]+[A-Z]?/gi, "")
+    .replace(/Villa No\.?\s*[\d/]+[A-Z]?/gi, "")
+    .replace(/Apartment No\.?\s*[\d/]+[A-Z]?/gi, "")
+    .replace(/Maisonette No\.?\s*[\d/]+[A-Z]?/gi, "")
+    .replace(/Semi Detached House No\.?\s*[\d/]+[A-Z]?/gi, "")
+    .replace(/Unit No\.?\s*[\d/]+[A-Z]?/gi, "")
+    .replace(/\s*-\s*V\d+$/gi, "")
+    .replace(/\s*-\s*[A-Z]\d+$/gi, "")
+    .replace(/\/\d+$/g, "")
+    .replace(/\(Old\s*\d+\)/gi, "")
+    .replace(/Old\s*\d+/gi, "")
+    .replace(/\s*[-–—]+\s*$/g, "")
+    .replace(/^k\s+/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+};
 
   const getTagFromItem = (item, tag) => {
     const match = item.match(
