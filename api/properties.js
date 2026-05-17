@@ -13,6 +13,9 @@ export default async function handler(req, res) {
     }
   ];
 
+  const fallbackImage =
+    "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1200&auto=format&fit=crop";
+
   try {
 
     const allUnits = [];
@@ -44,24 +47,66 @@ export default async function handler(req, res) {
             : "";
         };
 
+        const getAnyTag = (tags) => {
+          for (const tag of tags) {
+            const value = getTag(tag);
+            if (value) return value;
+          }
+          return "";
+        };
+
+        const parsePrice = () => {
+          const priceText = getAnyTag([
+            "price",
+            "PRICE",
+            "Price",
+            "property_price",
+            "PropertyPrice",
+            "sale_price",
+            "SalePrice",
+            "asking_price",
+            "AskingPrice",
+            "from_price",
+            "price_from",
+            "unit_price",
+            "UnitPrice",
+            "value"
+          ]);
+
+          if (!priceText) return 0;
+
+          let cleaned = priceText
+            .replace(/€/g, "")
+            .replace(/EUR/gi, "")
+            .replace(/,/g, "")
+            .replace(/\s/g, "")
+            .replace(/[^\d.]/g, "");
+
+          let value = Number(cleaned);
+
+          if (!value) return 0;
+
+          if (value > 10000000 && value % 100 === 0) {
+            value = value / 100;
+          }
+
+          if (value < 50000 || value > 10000000) {
+            return 0;
+          }
+
+          return Math.round(value);
+        };
+
         const location =
-          getTag("town") ||
-          getTag("city") ||
-          getTag("area") ||
-          getTag("region") ||
+          getAnyTag(["town", "city", "area", "region", "location"]) ||
           "Cyprus";
 
         const type =
-          getTag("property_type") ||
-          getTag("type") ||
+          getAnyTag(["property_type", "type", "category"]) ||
           "Property";
 
         const rawTitle =
-          getTag("title") ||
-          getTag("project_name") ||
-          getTag("name") ||
-          getTag("project") ||
-          getTag("development") ||
+          getAnyTag(["title", "project_name", "name", "project", "development"]) ||
           `${location} ${type}`;
 
         const projectName = rawTitle
@@ -72,68 +117,22 @@ export default async function handler(req, res) {
           .replace(/\s+-\s+$/g, "")
           .trim() || rawTitle;
 
-        const priceText =
-  getTag("price") ||
-  getTag("PRICE") ||
-  getTag("Price") ||
-  getTag("prices") ||
-  getTag("from_price") ||
-  getTag("price_from") ||
-  getTag("minimum_price") ||
-  getTag("min_price") ||
-  getTag("unit_price") ||
-  getTag("asking_price") ||
-  getTag("askingPrice") ||
-  getTag("sale_price") ||
-  getTag("salePrice") ||
-  getTag("current_price") ||
-  getTag("value") ||
-  "";
-
-const rawPrice =
-  priceText
-    .replace(/€/g, "")
-    .replace(/,/g, "")
-    .replace(/\s/g, "")
-    .replace(/[^\d]/g, "");
-
-let price =
-  Number(rawPrice) || 0;
-if (!price) {
-  console.log("NO PRICE FOUND:", {
-    developer: feed.developer,
-    title: rawTitle,
-    sample: item.slice(0, 500)
-  });
-}
-
-if (price > 10000000) {
-  price = Math.round(price / 100);
-}
+        const price = parsePrice();
 
         const rawImage =
-          getTag("image") ||
-          getTag("image_url") ||
-          getTag("IMAGE_URL") ||
-          getTag("picture") ||
-          "";
+          getAnyTag(["image", "image_url", "IMAGE_URL", "picture", "photo", "url"]);
 
         const image = rawImage
           .replace(/"/g, "")
           .replace(/<[^>]*>/g, "")
-          .trim() ||
-          "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1200&auto=format&fit=crop";
+          .trim() || fallbackImage;
 
         const description =
-          getTag("description") ||
-          getTag("desc") ||
+          getAnyTag(["description", "desc", "short_description"]) ||
           `${type} in ${location}`;
 
         const bedrooms =
-          getTag("beds") ||
-          getTag("bedrooms") ||
-          getTag("BEDROOMS") ||
-          "";
+          getAnyTag(["beds", "bedrooms", "BEDROOMS", "Bedrooms"]);
 
         const unitRef =
           `${feed.code}-${location.slice(0,3).toUpperCase()}-${type.slice(0,3).toUpperCase()}-${index + 1}`;
