@@ -30,14 +30,57 @@ const extractPrice = (text) => {
   return Number(match[1].replace(/,/g, ""));
 };
 
-const extractCity = (text) => {
-  const match = text.match(/City:\s*([A-Za-z\s-]+)/i);
+const extractCity = (html, text, url = "") => {
 
-  if (!match) return "";
+  const patterns = [
+    /City:\s*([A-Za-z\s-]+)/i,
+    /Location:\s*([A-Za-z\s-]+)/i,
+    /in\s+(Paralimni|Protaras|Ayia Napa|Larnaca|Nicosia|Limassol|Paphos)/i,
+    />(Paralimni|Protaras|Ayia Napa|Larnaca|Nicosia|Limassol|Paphos)</i
+  ];
 
-  return normalizeText(match[1])
-    .replace(/Zip.*$/i, "")
-    .trim();
+  for (const pattern of patterns) {
+    const match = text.match(pattern) || html.match(pattern);
+
+    if (match?.[1]) {
+      return normalizeText(match[1])
+        .replace(/Zip.*$/i, "")
+        .trim();
+    }
+  }
+
+  // fallback z URL
+  const lowerUrl = url.toLowerCase();
+
+  if (lowerUrl.includes("paralimni")) {
+    return "Paralimni";
+  }
+
+  if (lowerUrl.includes("protaras")) {
+    return "Protaras";
+  }
+
+  if (lowerUrl.includes("ayia-napa")) {
+    return "Ayia Napa";
+  }
+
+  if (lowerUrl.includes("larnaca")) {
+    return "Larnaca";
+  }
+
+  if (lowerUrl.includes("limassol")) {
+    return "Limassol";
+  }
+
+  if (lowerUrl.includes("paphos")) {
+    return "Paphos";
+  }
+
+  if (lowerUrl.includes("nicosia")) {
+    return "Nicosia";
+  }
+
+  return "";
 };
 
 const extractTitle = (html, text) => {
@@ -113,7 +156,7 @@ export async function getGiovaniProjects() {
 
       const text = cleanText(html);
 
-      const location = extractCity(text);
+      const location = extractCity(html, text, link);
 
       if (!location) continue;
 
