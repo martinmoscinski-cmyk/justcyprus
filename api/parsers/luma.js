@@ -4,116 +4,151 @@ import {
   fallbackImage
 } from "./helpers.js";
 
-const BASE_URL = "https://luma.cy";
+const CSV_URL =
+  "https://docs.google.com/spreadsheets/d/13nEauDXxv3zDbs_2wkTsTOY-8v6GNmTgHHweS_3LluI/gviz/tq?tqx=out:csv&sheet=MASTER";
 
-const absoluteUrl = (url = "") => {
-  if (!url) return "";
-
-  if (url.startsWith("http")) {
-    return url;
+const projectAssets = {
+  "Genesis": {
+    image: "https://luma.cy/wp-content/uploads/2026/01/project_hero_genesis.webp",
+    source: "https://luma.cy/projects/luma-genesis-paphos/"
+  },
+  "Emerald Park": {
+    image: "https://luma.cy/wp-content/uploads/2026/01/project_hero_Emerald.webp",
+    source: "https://luma.cy/projects/emerald-park/"
+  },
+  "Skala": {
+    image: "https://luma.cy/wp-content/uploads/2026/01/project_hero_Skala.webp",
+    source: "https://luma.cy/projects/skala/"
+  },
+  "Luma Resale": {
+    image: fallbackImage,
+    source: "https://luma.cy/our-projects/"
   }
-
-  if (url.startsWith("/")) {
-    return `${BASE_URL}${url}`;
-  }
-
-  return `${BASE_URL}/${url}`;
 };
 
-const cleanText = (html = "") => {
-  return normalizeText(
-    html
-      .replace(/<script[\s\S]*?<\/script>/gi, " ")
-      .replace(/<style[\s\S]*?<\/style>/gi, " ")
-      .replace(/<[^>]*>/g, " ")
-      .replace(/&nbsp;/g, " ")
+const parseCSVLine = (line = "") => {
+  const values = [];
+  let current = "";
+  let insideQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const nextChar = line[i + 1];
+
+    if (char === '"' && nextChar === '"') {
+      current += '"';
+      i++;
+    } else if (char === '"') {
+      insideQuotes = !insideQuotes;
+    } else if (char === "," && !insideQuotes) {
+      values.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+
+  values.push(current.trim());
+
+  return values;
+};
+
+const parseCSV = (csv = "") => {
+  const lines = csv
+    .split(/\r?\n/)
+    .filter((line) => line.trim());
+
+  const rows = lines.map(parseCSVLine);
+
+  const headerIndex = rows.findIndex((row) =>
+    row.some((cell) =>
+      normalizeText(cell).toLowerCase() === "project name"
+    )
   );
-};
 
-const extractPrice = (text = "") => {
-  const match =
-    text.match(/from\s+([\d,]+)\s*EUR/i) ||
-    text.match(/€\s*([\d,]+)/i);
-
-  if (!match) return 0;
-
-  return Number(match[1].replace(/,/g, ""));
-};
-
-const extractImage = (html = "") => {
-  const og =
-    html.match(
-      /property=["']og:image["']\s+content=["']([^"']+)["']/i
-    )?.[1] ||
-    html.match(
-      /content=["']([^"']+)["']\s+property=["']og:image["']/i
-    )?.[1];
-
-  if (og) {
-    return absoluteUrl(og);
+  if (headerIndex === -1) {
+    return [];
   }
 
-  return fallbackImage;
+  const headers = rows[headerIndex].map((h) =>
+    normalizeText(h)
+  );
+
+  return rows.slice(headerIndex + 1).map((row) => {
+    const obj = {};
+
+    headers.forEach((header, index) => {
+      obj[header] = normalizeText(row[index] || "");
+    });
+
+    return obj;
+  });
+};
+
+const parsePrice = (value = "") => {
+  return Number(
+    String(value)
+      .replace(/€|EUR|VAT|\+|,/gi, "")
+      .replace(/[^\d]/g, "")
+  ) || 0;
+};
+
+const normalizeLocation = (location = "") => {
+  const clean = normalizeText(location);
+
+  if (clean.toLowerCase().includes("gero")) {
+    return "Geroskipou, Paphos";
+  }
+
+  return clean || "Paphos";
 };
 
 export async function getLumaProjects() {
-  const projectPages = [
-    {
-      title: "Emerald Park",
-      location: "Geroskipou, Paphos",
-      url: "https://luma.cy/projects/emerald-park/"
-    },
-    {
-      title: "Luma Genesis",
-      location: "Geroskipou, Paphos",
-      url: "https://luma.cy/projects/luma-genesis-paphos/"
-    },
-    {
-      title: "Skala",
-      location: "Geroskipou Hills, Paphos",
-      url: "https://luma.cy/projects/skala/"
+  const response = await fetch(CSV_URL, {
+    headers: {
+      "User-Agent": "Mozilla/5.0"
     }
-  ];
+  });
+
+  const csv = await response.text();
+  const rows = parseCSV(csv);
 
   const units = [];
 
-  for (let i = 0; i < projectPages.length; i++) {
-    const project = projectPages[i];
+  rows.forEach((row, index) => {
+    const projectName = normalizeProjectName(
+      row["Project Name"] || ""
+    );
 
-    try {
-      const response = await fetch(project.url, {
-        headers: {
-          "User-Agent": "Mozilla/5.0"
-        }
-      });
+    if (!projectName) return;
 
-      const html = await response.text();
-      const text = cleanText(html);
+    const price = parsePrice(
+      row["Starting Price"] || ""
+    );
 
-      const price = extractPrice(text);
+    if (!price) return;
 
-      if (!price) continue;
+    const assets =
+      projectAssets[projectName] || {};
 
-      const image = extractImage(html);
-
-      units.push({
-        unitRef: `LUM-${i + 1}`,
-        projectName: normalizeProjectName(project.title),
-        unitTitle: normalizeText(project.title),
-        location: project.location,
-        type: "Apartment",
-        price,
-        image,
-        images: [image],
-        description:
-          `${project.title} is a selected Luma development in ${project.location}. Contact us for current availability, layouts and details.`,
-        bedrooms: "",
-        developer: "Luma",
-        source: project.url
-      });
-
-    } catch (e) {}
-  }
+    units.push({
+      unitRef: `LUM-${index + 1}`,
+      projectName,
+      unitTitle: projectName,
+      location: normalizeLocation(row["Location"]),
+      type: normalizeText(row["Property Type"] || "Apartment"),
+      price,
+      image: assets.image || fallbackImage,
+      images: [assets.image || fallbackImage],
+      description:
+        `${projectName} is a selected Luma development in ${normalizeLocation(row["Location"])}. Contact us for current availability, layouts and details.`,
+      bedrooms: normalizeText(row["Bedrooms"] || ""),
+      unitsAvailable: Number(row["Units"] || 0),
+      deliveryDate: normalizeText(row["Delivery Date"] || ""),
+      developer: "Luma",
+      source: assets.source || CSV_URL
+    });
+  });
 
   return units;
 }
