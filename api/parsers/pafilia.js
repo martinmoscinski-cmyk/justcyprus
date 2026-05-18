@@ -40,6 +40,34 @@ const detectPafiliaProject = (
   return "";
 };
 
+const cleanImageUrl = (image = "") => {
+  let cleaned = String(image || "")
+    .replace(/<!\[CDATA\[|\]\]>/g, "")
+    .trim();
+
+  const urlMatch =
+    cleaned.match(/https?:\/\/[^\s"'<>]+/i) ||
+    cleaned.match(/\/\/[^\s"'<>]+/i);
+
+  if (urlMatch?.[0]) {
+    cleaned = urlMatch[0];
+  }
+
+  cleaned = cleaned
+    .split('"')[0]
+    .split("'")[0]
+    .replace(/<[^>]*>/g, "")
+    .replace(/\s+alt=.*$/i, "")
+    .replace(/\s+loading=.*$/i, "")
+    .trim();
+
+  if (cleaned.startsWith("//")) {
+    cleaned = `https:${cleaned}`;
+  }
+
+  return cleaned;
+};
+
 export async function getPafiliaProjects() {
   const response = await fetch(
     "https://www.xml2u.com/Xml/Pafilia%20Property%20Developers_3814/6768_Kyero.xml",
@@ -87,9 +115,7 @@ export async function getPafiliaProjects() {
       getTag("image_url") ||
       "";
 
-    if (image.startsWith("//")) {
-      image = `https:${image}`;
-    }
+    image = cleanImageUrl(image);
 
     if (!image) {
       image = fallbackImage;
