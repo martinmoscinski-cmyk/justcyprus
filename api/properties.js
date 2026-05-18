@@ -1,6 +1,7 @@
 import { getAristoProjects } from "./parsers/aristo.js";
 import { getPafiliaProjects } from "./parsers/pafilia.js";
 import { getDomenicaProjects } from "./parsers/domenica.js";
+import { getLumaProjects } from "./parsers/luma.js";
 
 export const config = {
   runtime: "nodejs"
@@ -17,16 +18,18 @@ const normalizeProjectName = (text = "") => {
 
 export default async function handler(req, res) {
   try {
-    const [aristo, pafilia, domenica] = await Promise.all([
+    const [aristo, pafilia, domenica, luma] = await Promise.all([
       getAristoProjects(),
       getPafiliaProjects(),
-      getDomenicaProjects()
+      getDomenicaProjects(),
+      getLumaProjects()
     ]);
 
     const allUnits = [
       ...aristo,
       ...pafilia,
-      ...domenica
+      ...domenica,
+      ...luma
     ];
 
     const grouped = {};
@@ -34,9 +37,10 @@ export default async function handler(req, res) {
     allUnits.forEach((unit) => {
       const cleanProjectName = normalizeProjectName(unit.projectName);
 
-      const key = `${unit.developer}-${cleanProjectName}-${unit.location}`
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-");
+      const key =
+        `${unit.developer}-${cleanProjectName}-${unit.location}`
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-");
 
       if (!grouped[key]) {
         grouped[key] = {
