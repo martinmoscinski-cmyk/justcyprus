@@ -1,7 +1,6 @@
 import { getAristoProjects } from "./parsers/aristo.js";
 import { getPafiliaProjects } from "./parsers/pafilia.js";
 import { getDomenicaProjects } from "./parsers/domenica.js";
-import { getGiovaniProjects } from "./parsers/giovani.js";
 
 export const config = {
   runtime: "nodejs"
@@ -18,35 +17,26 @@ const normalizeProjectName = (text = "") => {
 
 export default async function handler(req, res) {
   try {
-    const [
-      aristo,
-      pafilia,
-      domenica,
-      giovani
-    ] = await Promise.all([
+    const [aristo, pafilia, domenica] = await Promise.all([
       getAristoProjects(),
       getPafiliaProjects(),
-      getDomenicaProjects(),
-      getGiovaniProjects()
+      getDomenicaProjects()
     ]);
 
     const allUnits = [
       ...aristo,
       ...pafilia,
-      ...domenica,
-      ...giovani
+      ...domenica
     ];
 
     const grouped = {};
 
     allUnits.forEach((unit) => {
-      const cleanProjectName =
-        normalizeProjectName(unit.projectName);
+      const cleanProjectName = normalizeProjectName(unit.projectName);
 
-      const key =
-        `${unit.developer}-${cleanProjectName}-${unit.location}`
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-");
+      const key = `${unit.developer}-${cleanProjectName}-${unit.location}`
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-");
 
       if (!grouped[key]) {
         grouped[key] = {
@@ -58,8 +48,7 @@ export default async function handler(req, res) {
           priceFrom: unit.price || 0,
           image: unit.image,
           images: [],
-          description:
-            `${cleanProjectName} is a selected development in ${unit.location}. Contact us for current availability, layouts and details.`,
+          description: `${cleanProjectName} is a selected development in ${unit.location}. Contact us for current availability, layouts and details.`,
           unitsCount: 0,
           units: [],
           developer: unit.developer,
@@ -72,19 +61,13 @@ export default async function handler(req, res) {
 
       if (
         unit.price &&
-        (
-          !grouped[key].priceFrom ||
-          unit.price < grouped[key].priceFrom
-        )
+        (!grouped[key].priceFrom || unit.price < grouped[key].priceFrom)
       ) {
         grouped[key].priceFrom = unit.price;
       }
 
       unit.images?.forEach((img) => {
-        if (
-          img &&
-          !grouped[key].images.includes(img)
-        ) {
+        if (img && !grouped[key].images.includes(img)) {
           grouped[key].images.push(img);
         }
       });
@@ -94,10 +77,10 @@ export default async function handler(req, res) {
       .filter((project) => project.priceFrom > 0)
       .sort((a, b) => a.priceFrom - b.priceFrom);
 
-      res.setHeader(
-  "Cache-Control",
-  "s-maxage=3600, stale-while-revalidate=86400"
-);
+    res.setHeader(
+      "Cache-Control",
+      "s-maxage=3600, stale-while-revalidate=86400"
+    );
 
     res.status(200).json({
       success: true,
@@ -105,14 +88,9 @@ export default async function handler(req, res) {
       totalProjects: projects.length,
       totalUnits: allUnits.length,
       locations: [
-        ...new Set(
-          projects
-            .map((p) => p.location)
-            .filter(Boolean)
-        )
+        ...new Set(projects.map((p) => p.location).filter(Boolean))
       ].sort()
     });
-
   } catch (error) {
     res.status(500).json({
       success: false,
