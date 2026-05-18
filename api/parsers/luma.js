@@ -52,37 +52,6 @@ const parseCSVLine = (line = "") => {
   return values;
 };
 
-const parseCSV = (csv = "") => {
-  const lines = csv
-    .replace(/^\uFEFF/, "")
-    .split(/\r?\n/)
-    .filter((line) => line.trim());
-
-  const rows = lines.map(parseCSVLine);
-
-  const headerIndex = rows.findIndex((row) =>
-    row.join(" ").toLowerCase().includes("project name")
-  );
-
-  if (headerIndex === -1) {
-    return [];
-  }
-
-  const headers = rows[headerIndex].map((h) =>
-    normalizeText(h)
-  );
-
-  return rows.slice(headerIndex + 1).map((row) => {
-    const obj = {};
-
-    headers.forEach((header, index) => {
-      obj[header] = normalizeText(row[index] || "");
-    });
-
-    return obj;
-  });
-};
-
 const parsePrice = (value = "") => {
   return (
     Number(
@@ -111,19 +80,36 @@ export async function getLumaProjects() {
   });
 
   const csv = await response.text();
-  const rows = parseCSV(csv);
+
+  const lines = csv
+    .replace(/^\uFEFF/, "")
+    .split(/\r?\n/)
+    .filter((line) => line.trim());
+
+  const rows = lines.map(parseCSVLine);
+
+  const headers = rows[1];
+
+  const dataRows = rows.slice(2);
 
   const units = [];
 
-  rows.forEach((row, index) => {
+  dataRows.forEach((row, index) => {
+    const item = {};
+
+    headers.forEach((header, i) => {
+      item[normalizeText(header)] =
+        normalizeText(row[i] || "");
+    });
+
     const projectName = normalizeProjectName(
-      row["Project Name"] || ""
+      item["Project Name"]
     );
 
     if (!projectName) return;
 
     const price = parsePrice(
-      row["Starting Price"] || ""
+      item["Starting Price"]
     );
 
     if (!price) return;
@@ -131,26 +117,24 @@ export async function getLumaProjects() {
     const assets = projectAssets[projectName] || {};
 
     const location = normalizeLocation(
-      row["Location"] || ""
+      item["Location"]
     );
 
-    const image =
-      assets.image || fallbackImage;
+    const image = assets.image || fallbackImage;
 
     units.push({
       unitRef: `LUM-${index + 1}`,
       projectName,
       unitTitle: projectName,
       location,
-      type: normalizeText(row["Property Type"] || "Apartment"),
+      type: item["Property Type"] || "Apartment",
       price,
       image,
       images: [image],
-      description:
-        `${projectName} is a selected Luma development in ${location}. Contact us for current availability, layouts and details.`,
-      bedrooms: normalizeText(row["Bedrooms"] || ""),
-      unitsAvailable: Number(row["Units"] || 0),
-      deliveryDate: normalizeText(row["Delivery Date"] || ""),
+      description: `${projectName} is a selected Luma development in ${location}. Contact us for current availability, layouts and details.`,
+      bedrooms: item["Bedrooms"] || "",
+      unitsAvailable: Number(item["Units"] || 0),
+      deliveryDate: item["Delivery Date"] || "",
       developer: "Luma",
       source: assets.source || CSV_URL
     });
