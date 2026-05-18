@@ -27,29 +27,11 @@ const projectAssets = {
 };
 
 const parseCSVLine = (line = "") => {
-  const values = [];
-  let current = "";
-  let insideQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    const nextChar = line[i + 1];
-
-    if (char === '"' && nextChar === '"') {
-      current += '"';
-      i++;
-    } else if (char === '"') {
-      insideQuotes = !insideQuotes;
-    } else if (char === "," && !insideQuotes) {
-      values.push(current.trim());
-      current = "";
-    } else {
-      current += char;
-    }
-  }
-
-  values.push(current.trim());
-  return values;
+  return line
+    .split("\t")
+    .map((value) =>
+      normalizeText(value.replace(/^"|"$/g, ""))
+    );
 };
 
 const parsePrice = (value = "") => {
@@ -65,6 +47,10 @@ const parsePrice = (value = "") => {
 const normalizeLocation = (location = "") => {
   const clean = normalizeText(location);
 
+  if (clean.toLowerCase().includes("universal")) {
+    return "Universal, Paphos";
+  }
+
   if (clean.toLowerCase().includes("gero")) {
     return "Geroskipou, Paphos";
   }
@@ -79,18 +65,25 @@ export async function getLumaProjects() {
     }
   });
 
-  const csv = await response.text();
+  const raw = await response.text();
 
-  const lines = csv
+  const lines = raw
     .replace(/^\uFEFF/, "")
     .split(/\r?\n/)
     .filter((line) => line.trim());
 
   const rows = lines.map(parseCSVLine);
 
-  const headers = rows[1];
+  const headerIndex = rows.findIndex((row) =>
+    row.includes("Project Name")
+  );
 
-  const dataRows = rows.slice(2);
+  if (headerIndex === -1) {
+    return [];
+  }
+
+  const headers = rows[headerIndex];
+  const dataRows = rows.slice(headerIndex + 1);
 
   const units = [];
 
@@ -98,8 +91,7 @@ export async function getLumaProjects() {
     const item = {};
 
     headers.forEach((header, i) => {
-      item[normalizeText(header)] =
-        normalizeText(row[i] || "");
+      item[header] = row[i] || "";
     });
 
     const projectName = normalizeProjectName(
