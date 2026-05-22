@@ -23,7 +23,9 @@ function cleanText(text) {
 function normalizeLocation(text) {
   return cleanText(text)
     .toLowerCase()
-    .replaceAll("paphos", "pafos");
+    .replaceAll("paphos", "pafos")
+    .replaceAll("geroskipou hills", "pafos")
+    .replaceAll("geroskipou", "pafos");
 }
 
 function makePrice(price) {
@@ -101,9 +103,9 @@ function renderProjects(projects, page = 1) {
             <div>
               <div class="price">${priceText}</div>
               <small class="units">
-  ${project.developer === "Domenica"
-    ? "Available now"
-    : `${project.unitsCount || 0} units available`}
+  ${["Domenica", "Luma"].includes(project.developer)
+  ? "Availability on request"
+  : `${project.unitsCount || 0} units available`}
 </small>
             </div>
 

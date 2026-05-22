@@ -26,15 +26,55 @@ const projectAssets = {
   }
 };
 
+const parseCSVLine = (line = "") => {
+  const values = [];
+  let current = "";
+  let insideQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+
+    if (char === '"') {
+      insideQuotes = !insideQuotes;
+      continue;
+    }
+
+    if (char === "," && !insideQuotes) {
+      values.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+
+  values.push(current.trim());
+  return values;
+};
+
 const parsePrice = (value = "") => {
-  return Number(
-    String(value).replace(/[^\d]/g, "")
-  ) || 0;
+  return Number(String(value).replace(/[^\d]/g, "")) || 0;
+};
+
+const normalizeLumaLocation = (location = "") => {
+  const clean = normalizeText(location).toLowerCase();
+
+  if (clean.includes("universal")) {
+    return "Universal, Paphos";
+  }
+
+  if (clean.includes("geroskipou")) {
+    return "Geroskipou, Paphos";
+  }
+
+  return normalizeText(location) || "Paphos";
 };
 
 export async function getLumaProjects() {
-
-  const response = await fetch(CSV_URL);
+  const response = await fetch(CSV_URL, {
+    headers: {
+      "User-Agent": "Mozilla/5.0"
+    }
+  });
 
   const raw = await response.text();
 
@@ -46,7 +86,6 @@ export async function getLumaProjects() {
   const units = [];
 
   lines.forEach((line, index) => {
-
     if (
       !line.includes("€") ||
       line.includes("Project Catalogue")
@@ -54,32 +93,21 @@ export async function getLumaProjects() {
       return;
     }
 
-    const cols = line.split(",");
+    const cols = parseCSVLine(line);
 
-    const projectName =
-      normalizeProjectName(cols[0] || "");
-
+    const projectName = normalizeProjectName(cols[0] || "");
     if (!projectName) return;
 
-    const location =
-      normalizeText(cols[1] || "Paphos");
-
-    const bedrooms =
-      normalizeText(cols[2] || "");
-
-    const type =
-      normalizeText(cols[3] || "Apartment");
-
-    const unitsAvailable =
-      Number(cols[4] || 0);
-
-    const price =
-      parsePrice(cols[5] || "");
+    const location = normalizeLumaLocation(cols[1] || "Paphos");
+    const bedrooms = normalizeText(cols[2] || "");
+    const type = normalizeText(cols[3] || "Apartment");
+    const totalUnits = Number(cols[4] || 0);
+    const price = parsePrice(cols[5] || "");
 
     if (!price) return;
 
-    const assets =
-      projectAssets[projectName] || {};
+    const assets = projectAssets[projectName] || {};
+    const image = assets.image || fallbackImage;
 
     units.push({
       unitRef: `LUM-${index + 1}`,
@@ -88,20 +116,17 @@ export async function getLumaProjects() {
       location,
       type,
       price,
-      image:
-        assets.image || fallbackImage,
-      images: [
-        assets.image || fallbackImage
-      ],
-      description:
-        `${projectName} is a selected Luma development in ${location}. Contact us for current availability, layouts and details.`,
+      image,
+      images: [image],
+      description: `${projectName} is a selected Luma development in ${location}. Contact us for current availability, layouts and details.`,
       bedrooms,
-      unitsAvailable,
+      totalUnits,
+      unitsAvailable: null,
+      availabilityText: "Availability on request",
+      deliveryDate: normalizeText(cols[6] || ""),
       developer: "Luma",
-      source:
-        assets.source || CSV_URL
+      source: assets.source || CSV_URL
     });
-
   });
 
   return units;
