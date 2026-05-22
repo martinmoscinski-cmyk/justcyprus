@@ -55,14 +55,10 @@ const getImages = (block = "") => {
 };
 
 const getProperties = (development = "") => {
-  const propertiesBlock = getBlock(development, "properties");
-
-  if (!propertiesBlock) return [];
-
-  return propertiesBlock
-    .split(/<property\b/i)
-    .slice(1)
-    .map((part) => `<property${part.split("</property>")[0]}</property>`);
+  return (
+    development.match(/<property[\s\S]*?<\/property>/gi) ||
+    []
+  );
 };
 
 export async function getPafiliaProjects() {
