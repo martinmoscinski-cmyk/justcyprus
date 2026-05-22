@@ -74,10 +74,11 @@ export async function getPafiliaProjects() {
 
   const xml = await response.text();
 
-  const developments = xml
-    .split(/<development>/i)
-    .slice(1)
-    .map((part) => `<development>${part.split("</development>")[0]}</development>`);
+  const developments = [
+  ...xml.matchAll(
+    /<development>([\s\S]*?)<\/development>/gi
+  )
+].map((match) => match[0]);
 
   const units = [];
 
