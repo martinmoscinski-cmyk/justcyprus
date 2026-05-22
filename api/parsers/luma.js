@@ -96,7 +96,14 @@ export async function getLumaProjects() {
     const cols = parseCSVLine(line);
 
     const projectName = normalizeProjectName(cols[0] || "");
-    if (!projectName) return;
+
+if (
+  projectName.toLowerCase().includes("resale")
+) {
+  return;
+}
+
+if (!projectName) return;
 
     const location = normalizeLumaLocation(cols[1] || "Paphos");
     const bedrooms = normalizeText(cols[2] || "");

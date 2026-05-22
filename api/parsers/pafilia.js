@@ -6,40 +6,6 @@ import {
   fallbackImage
 } from "./helpers.js";
 
-const detectPafiliaProject = (
-  rawTitle,
-  description,
-  image
-) => {
-  const text =
-    `${rawTitle} ${description} ${image}`.toLowerCase();
-
-  const projects = [
-    "Elysia Blu",
-    "Minthis",
-    "ONE",
-    "NEO",
-    "Lofos",
-    "Pearl Park",
-    "Pafilia Gardens",
-    "Aphrodite Springs",
-    "Park Avenue",
-    "Oasis",
-    "Elite Residences",
-    "The Edge",
-    "Urban",
-    "Mediterranean Heights"
-  ];
-
-  for (const project of projects) {
-    if (text.includes(project.toLowerCase())) {
-      return project;
-    }
-  }
-
-  return "";
-};
-
 const cleanImageUrl = (image = "") => {
   let cleaned = String(image || "")
     .replace(/<!\[CDATA\[|\]\]>/g, "")
@@ -81,14 +47,12 @@ export async function getPafiliaProjects() {
   const xml = await response.text();
 
   const items =
-    xml.match(/<property>([\s\S]*?)<\/property>/gi) ||
-    [];
+    xml.match(/<property>([\s\S]*?)<\/property>/gi) || [];
 
   const units = [];
 
   items.forEach((item, index) => {
-    const getTag = (tag) =>
-      getTagFromItem(item, tag);
+    const getTag = (tag) => getTagFromItem(item, tag);
 
     const location =
       getTag("town") ||
@@ -104,6 +68,19 @@ export async function getPafiliaProjects() {
     const rawTitle =
       getTag("title") ||
       `${location} ${type}`;
+
+    const rawProject =
+      getTag("project") ||
+      getTag("Project") ||
+      getTag("project_name") ||
+      getTag("development") ||
+      getTag("Development") ||
+      getTag("complex") ||
+      getTag("Complex") ||
+      rawTitle;
+
+    const projectName =
+      normalizeProjectName(rawProject);
 
     const description =
       getTag("description") ||
@@ -125,17 +102,6 @@ export async function getPafiliaProjects() {
       getTag("Price") || getTag("price")
     );
 
-    const detectedProject =
-      detectPafiliaProject(
-        rawTitle,
-        description,
-        image
-      );
-
-    const projectName =
-      detectedProject ||
-      normalizeProjectName(rawTitle);
-
     units.push({
       unitRef: `PAF-${index + 1}`,
       projectName,
@@ -146,6 +112,11 @@ export async function getPafiliaProjects() {
       image,
       images: [image],
       description,
+      bedrooms:
+        getTag("beds") ||
+        getTag("Bedrooms") ||
+        getTag("bedrooms") ||
+        "",
       developer: "Pafilia",
       source:
         "https://www.xml2u.com/Xml/Pafilia%20Property%20Developers_3814/6768_Kyero.xml"

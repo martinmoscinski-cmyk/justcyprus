@@ -25,8 +25,7 @@ export async function getAristoProjects() {
   const units = [];
 
   items.forEach((item, index) => {
-    const getTag = (tag) =>
-      getTagFromItem(item, tag);
+    const getTag = (tag) => getTagFromItem(item, tag);
 
     const location =
       getTag("town") ||
@@ -55,8 +54,18 @@ export async function getAristoProjects() {
       getTag("name") ||
       rawTitle;
 
-    const projectName =
-      normalizeProjectName(rawProject);
+    const projectName = normalizeProjectName(rawProject);
+
+    const combinedText =
+      `${type} ${rawTitle} ${projectName}`.toLowerCase();
+
+    if (
+      combinedText.includes("plot") ||
+      combinedText.includes("plots") ||
+      combinedText.includes("land")
+    ) {
+      return;
+    }
 
     const description =
       getTag("description") ||
