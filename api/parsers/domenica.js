@@ -28,17 +28,34 @@ const cleanTitle = (title = "") => {
 };
 
 const shouldSkipProject = (title = "", type = "") => {
-  const text = `${title} ${type}`.toLowerCase();
+  const text =
+    `${title} ${type}`.toLowerCase();
 
   return (
     !title ||
-    title.length > 45 ||
+
+    title.length > 40 ||
+
     text.includes("for sale showroom") ||
     text.includes("for sale apartments") ||
     text.includes("for sale villas") ||
     text.includes("for sale sold") ||
+
     text.includes("under construction completed") ||
-    text.includes("sold")
+    text.includes("under construction") ||
+    text.includes("completed villas") ||
+    text.includes("completed apartments") ||
+
+    text.includes("sold") ||
+
+    text.includes("villas apartments") ||
+    text.includes("apartments villas") ||
+
+    text.includes("showroom") ||
+
+    text.includes("chloraka pafos") ||
+
+    text.trim().split(" ").length > 6
   );
 };
 
