@@ -3,7 +3,7 @@ const resultsPerPage = 6;
 let currentMatched = [];
 
 async function fetchProjects() {
-  const response = await fetch("/api/properties");
+  const response = await fetch("/api/cache-properties");
   const data = await response.json();
   return data.projects || [];
 }
@@ -88,7 +88,7 @@ function renderProjects(projects, page = 1) {
           Ref: ${ref}
         </div>
 
-        <img src="${image}" alt="${title}" loading="lazy">
+        <script src="script.js?v=10"></script>
 
         <div class="property-body">
 
