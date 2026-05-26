@@ -49,8 +49,8 @@ export default async function handler(req, res) {
           location: unit.location,
           type: unit.type,
           priceFrom: unit.price || 0,
-          image: unit.image,
-          images: [],
+          image: unit.image || unit.images?.[0] || "images/property-1.jpg",
+images: unit.images?.length ? unit.images : [unit.image || "images/property-1.jpg"],
           description:
             `${cleanProjectName} is a selected development in ${unit.location}. Contact us for current availability, layouts and details.`,
           unitsCount: 0,
