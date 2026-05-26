@@ -26,10 +26,6 @@ const cleanText = (html = "") => {
 };
 
 const getImages = (html = "") => {
-  const regex =
-    /(?:src|data-src|data-lazy-src|href)=["']([^"']+\.(?:jpg|jpeg|png|webp)(?:\?[^"']*)?)["']/gi;
-
-  const getImages = (html = "") => {
   const matches = [
     ...html.matchAll(/https?:\/\/res2\.weblium\.site\/[^\s"'<>),]+/gi)
   ];
@@ -51,6 +47,7 @@ const getImages = (html = "") => {
     )
   ].slice(0, 8);
 };
+
 const getProjectLinks = (html = "") => {
   const matches = [
     ...html.matchAll(/href=["']([^"']*\/portfolio\/[^"']+)["']/gi)
@@ -156,7 +153,7 @@ export async function getDomenicaProjects() {
       if (shouldSkip(parsed.title, parsed.type)) continue;
       if (!parsed.price) continue;
 
-      const images = getImages(projectHtml).slice(0, 8);
+      const images = getImages(projectHtml);
       const safeImages = images.length ? images : [fallbackImage];
 
       units.push({
