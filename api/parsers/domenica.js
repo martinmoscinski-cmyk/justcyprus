@@ -18,22 +18,36 @@ const cleanText = (html = "") => {
 };
 
 const getImages = (html = "") => {
-  const matches = [
-    ...html.matchAll(/<img[^>]+src=["']([^"']+)["']/gi)
-  ];
+
+  const regex =
+    /(?:src|data-src|data-lazy-src)=["']([^"']+)["']/gi;
+
+  const matches = [...html.matchAll(regex)];
 
   return [
     ...new Set(
       matches
         .map((m) => m[1])
-        .filter((src) =>
-          src &&
-          src.startsWith("http") &&
-          !src.toLowerCase().includes("logo") &&
-          !src.toLowerCase().includes("icon") &&
-          !src.toLowerCase().includes("svg") &&
-          !src.toLowerCase().includes("favicon")
-        )
+        .filter((src) => {
+
+          if (!src) return false;
+
+          const lower = src.toLowerCase();
+
+          return (
+            src.startsWith("http") &&
+            (
+              lower.includes(".jpg") ||
+              lower.includes(".jpeg") ||
+              lower.includes(".png") ||
+              lower.includes(".webp")
+            ) &&
+            !lower.includes("logo") &&
+            !lower.includes("icon") &&
+            !lower.includes("svg") &&
+            !lower.includes("favicon")
+          );
+        })
     )
   ];
 };
