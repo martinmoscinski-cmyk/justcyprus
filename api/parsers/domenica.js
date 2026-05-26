@@ -27,21 +27,20 @@ const cleanText = (html = "") => {
 
 const getImages = (html = "") => {
   const patterns = [
-    /https?:\/\/res2\.weblium\.site\/[^\s"'<>),\\]+/gi,
+    /https?:\/\/res2\.weblium\.site\/res\/[^\s"'<>),\\]+/gi,
     /https?:\/\/[^"'<>),\\]+\.(?:jpg|jpeg|png|webp)(?:\?[^"'<>),\\]*)?/gi,
-    /(?:src|data-src|data-lazy-src|href)=["']([^"']+\.(?:jpg|jpeg|png|webp)(?:\?[^"']*)?)["']/gi,
+    /(?:src|data-src|data-lazy-src|href)=["']([^"']+)["']/gi,
     /background-image:\s*url\(["']?([^"')]+)["']?\)/gi
   ];
 
   const images = [];
 
   patterns.forEach((regex) => {
-    const matches = [...html.matchAll(regex)];
-
-    matches.forEach((match) => {
+    [...html.matchAll(regex)].forEach((match) => {
       const raw = (match[1] || match[0])
         .replace(/&quot;/g, "")
-        .replace(/&amp;/g, "&");
+        .replace(/&amp;/g, "&")
+        .trim();
 
       const url = absoluteUrl(raw);
       const lower = url.toLowerCase();
@@ -49,6 +48,7 @@ const getImages = (html = "") => {
       if (
         url.startsWith("http") &&
         (
+          lower.includes("res2.weblium.site/res/") ||
           lower.includes(".jpg") ||
           lower.includes(".jpeg") ||
           lower.includes(".png") ||
@@ -66,24 +66,6 @@ const getImages = (html = "") => {
   });
 
   return [...new Set(images)];
-};
-
-const getProjectLinks = (html = "") => {
-  const matches = [
-    ...html.matchAll(/href=["']([^"']+)["']/gi)
-  ];
-
-  return [
-    ...new Set(
-      matches
-        .map((m) => absoluteUrl(m[1]))
-        .filter((url) =>
-          url.startsWith(`${BASE_URL}/portfolio/`) &&
-          url !== SOURCE_URL &&
-          !url.includes("#")
-        )
-    )
-  ];
 };
 
 const parsePrice = (text = "") => {
@@ -137,81 +119,44 @@ export async function getDomenicaProjects() {
     }
   });
 
-  const portfolioHtml = await response.text();
-  const portfolioText = cleanText(portfolioHtml);
-  const projectLinks = getProjectLinks(portfolioHtml);
+  const html = await response.text();
+  const text = cleanText(html);
+  const images = getImages(html);
 
-  const portfolioMatches = [
-    ...portfolioText.matchAll(
+  const matches = [
+    ...text.matchAll(
       /([A-Z][A-Za-z0-9'’&.\s-]{2,60})\s+([A-Za-z\s]+,\s*Pafos|[A-Za-z\s]+,\s*Paphos)\s+Area:\s*([\s\S]*?)\s+Type:\s*([\s\S]*?)\s+(?:Off Plan|Under Construction|Completed)\s+Price range:\s*€\s*([\d.,]+)\s*k?/gi
     )
   ];
 
   const units = [];
 
-  for (let i = 0; i < portfolioMatches.length; i++) {
-    const match = portfolioMatches[i];
-
+  matches.forEach((match, index) => {
     const title = cleanProjectName(match[1]);
     const location = normalizeText(match[2]).replace("Paphos", "Pafos");
     const type = normalizeText(match[4]);
     const price = parsePrice(match[0]);
 
-    if (shouldSkip(title, type)) continue;
-    if (!price) continue;
+    if (shouldSkip(title, type)) return;
+    if (!price) return;
 
-    const titleSlug = title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "");
-
-    const link =
-      projectLinks.find((url) => {
-        const cleanUrl = url.toLowerCase();
-
-        return (
-          cleanUrl.includes(titleSlug) ||
-          titleSlug.split("-").some((word) =>
-            word.length > 4 && cleanUrl.includes(word)
-          )
-        );
-      }) || "";
-
-    let images = [];
-
-    if (link) {
-      try {
-        const projectResponse = await fetch(link, {
-          headers: {
-            "User-Agent": "Mozilla/5.0"
-          }
-        });
-
-        const projectHtml = await projectResponse.text();
-        images = getImages(projectHtml);
-      } catch (e) {}
-    }
-
-    const safeImages =
-      images.length
-        ? images
-        : [fallbackImage];
+    const image = images[index] || fallbackImage;
 
     units.push({
-      unitRef: `DOM-${i + 1}`,
+      unitRef: `DOM-${index + 1}`,
       projectName: title,
       unitTitle: title,
       location,
       type,
       price,
-      image: safeImages[0],
-      images: safeImages,
+      image,
+      images: [image],
       description: `${title} is a selected Domenica Group development in ${location}. Contact us for current availability, layouts and details.`,
       bedrooms: "",
       developer: "Domenica",
-      source: link || SOURCE_URL
+      source: SOURCE_URL
     });
-  }
+  });
 
   return units;
 }
