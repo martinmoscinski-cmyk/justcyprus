@@ -7,6 +7,8 @@ export const config = {
   runtime: "nodejs"
 };
 
+const fallbackImage = "images/property-1.jpg";
+
 const normalizeProjectName = (text = "") => {
   return String(text)
     .replace(/\s+(APARTMENT|VILLA|HOUSE|UNIT|OFFICE|PENTHOUSE)\s*[A-Z]?\d+[A-Z]?$/i, "")
@@ -14,6 +16,21 @@ const normalizeProjectName = (text = "") => {
     .replace(/\s+\d{2,4}$/i, "")
     .replace(/\s+/g, " ")
     .trim();
+};
+
+const cleanImages = (unit) => {
+  const images = [
+    unit.image,
+    ...(unit.images || [])
+  ].filter((img) =>
+    img &&
+    typeof img === "string" &&
+    img.trim() &&
+    img !== "undefined" &&
+    img !== "null"
+  );
+
+  return images.length ? [...new Set(images)] : [fallbackImage];
 };
 
 export default async function handler(req, res) {
@@ -37,6 +54,10 @@ export default async function handler(req, res) {
     allUnits.forEach((unit) => {
       const cleanProjectName = normalizeProjectName(unit.projectName);
 
+      if (!cleanProjectName) return;
+
+      const unitImages = cleanImages(unit);
+
       const key = `${unit.developer}-${cleanProjectName}-${unit.location}`
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-");
@@ -49,8 +70,8 @@ export default async function handler(req, res) {
           location: unit.location,
           type: unit.type,
           priceFrom: unit.price || 0,
-          image: unit.image || unit.images?.[0] || "images/property-1.jpg",
-images: unit.images?.length ? unit.images : [unit.image || "images/property-1.jpg"],
+          image: unitImages[0],
+          images: [...unitImages],
           description:
             `${cleanProjectName} is a selected development in ${unit.location}. Contact us for current availability, layouts and details.`,
           unitsCount: 0,
@@ -70,11 +91,15 @@ images: unit.images?.length ? unit.images : [unit.image || "images/property-1.jp
         grouped[key].priceFrom = unit.price;
       }
 
-      unit.images?.forEach((img) => {
+      unitImages.forEach((img) => {
         if (img && !grouped[key].images.includes(img)) {
           grouped[key].images.push(img);
         }
       });
+
+      if (!grouped[key].image && grouped[key].images.length) {
+        grouped[key].image = grouped[key].images[0];
+      }
     });
 
     const projects = Object.values(grouped)
