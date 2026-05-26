@@ -7,98 +7,77 @@ import {
 const SOURCE_URL =
   "https://www.domenicagroup.com/portfolio";
 
-const cleanHtmlText = (html = "") => {
+const cleanText = (html = "") => {
   return normalizeText(
     html
       .replace(/<script[\s\S]*?<\/script>/gi, " ")
       .replace(/<style[\s\S]*?<\/style>/gi, " ")
       .replace(/<[^>]*>/g, " ")
+      .replace(/&nbsp;/g, " ")
   );
 };
 
-const cleanTitle = (title = "") => {
-  return normalizeProjectName(title)
+const getImages = (html = "") => {
+  const matches = [
+    ...html.matchAll(/<img[^>]+src=["']([^"']+)["']/gi)
+  ];
+
+  return [
+    ...new Set(
+      matches
+        .map((m) => m[1])
+        .filter((src) =>
+          src &&
+          src.startsWith("http") &&
+          !src.toLowerCase().includes("logo") &&
+          !src.toLowerCase().includes("icon") &&
+          !src.toLowerCase().includes("svg") &&
+          !src.toLowerCase().includes("favicon")
+        )
+    )
+  ];
+};
+
+const parsePrice = (text = "") => {
+  const match =
+    text.match(/Price range:\s*€\s*([\d.,]+)\s*k/i) ||
+    text.match(/Price range:\s*€\s*([\d.,]+)/i);
+
+  if (!match) return 0;
+
+  let value = Number(match[1].replace(/,/g, ""));
+
+  if (/k/i.test(match[0])) {
+    value *= 1000;
+  }
+
+  return value || 0;
+};
+
+const cleanProjectName = (name = "") => {
+  return normalizeProjectName(name)
+    .replace(/\bUnder Construction\b/gi, "")
+    .replace(/\bCompleted\b/gi, "")
     .replace(/\bFor Sale\b/gi, "")
     .replace(/\bSold\b/gi, "")
     .replace(/\bShowroom\b/gi, "")
-    .replace(/\bCompleted\b/gi, "")
-    .replace(/\bUnder Construction\b/gi, "")
+    .replace(/\bVillas\b/gi, "")
+    .replace(/\bApartments\b/gi, "")
     .replace(/\s+/g, " ")
     .trim();
 };
 
-const shouldSkipProject = (title = "", type = "") => {
-  const text =
-    `${title} ${type}`.toLowerCase();
+const shouldSkip = (title = "", type = "") => {
+  const text = `${title} ${type}`.toLowerCase();
 
   return (
     !title ||
-
-    title.length > 40 ||
-
-    text.includes("for sale showroom") ||
-    text.includes("for sale apartments") ||
-    text.includes("for sale villas") ||
-    text.includes("for sale sold") ||
-
-    text.includes("under construction completed") ||
-    text.includes("under construction") ||
-    text.includes("completed villas") ||
-    text.includes("completed apartments") ||
-
-    text.includes("sold") ||
-
-    text.includes("villas apartments") ||
-    text.includes("apartments villas") ||
-
+    title.length > 45 ||
     text.includes("showroom") ||
-
-    text.includes("chloraka pafos") ||
-
-    text.trim().split(" ").length > 6
+    text.includes("sold") ||
+    text.includes("villas apartments") ||
+    text.includes("apartments villas")
   );
-};
-
-const parsePrice = (value = "", hasK = false) => {
-  let price =
-    Number(
-      String(value)
-        .replace(/,/g, "")
-        .replace(/\s/g, "")
-    ) || 0;
-
-  if (hasK) {
-    price = price * 1000;
-  }
-
-  if (price < 50000 || price > 10000000) {
-    return 0;
-  }
-
-  return price;
-};
-
-const getImages = (html = "") => {
-  const imageMatches = [
-    ...html.matchAll(/<img[^>]+src=["']([^"']+)["']/gi)
-  ];
-
-  return imageMatches
-    .map((match) => match[1])
-    .filter((src) =>
-      src &&
-      !src.toLowerCase().includes("logo") &&
-      !src.toLowerCase().includes("icon") &&
-      !src.toLowerCase().includes("svg") &&
-      !src.toLowerCase().includes("favicon")
-    )
-    .map((src) => {
-      if (src.startsWith("/")) {
-        return `https://www.domenicagroup.com${src}`;
-      }
-
-      return src;
-    });
 };
 
 export async function getDomenicaProjects() {
@@ -109,39 +88,32 @@ export async function getDomenicaProjects() {
   });
 
   const html = await response.text();
-  const text = cleanHtmlText(html);
+  const text = cleanText(html);
   const images = getImages(html);
 
   const matches = [
     ...text.matchAll(
-      /([A-Z][A-Za-z0-9'’&.\s-]{2,60})\s+([A-Za-z,\s]+Pafos)\s+Area:\s*([\s\S]*?)\s+Type:\s*([\s\S]*?)\s+(?:Off Plan|Under Construction|For Sale|Completed)\s+Price range:\s*€\s*([\d.,]+)\s*k?/gi
+      /([A-Z][A-Za-z0-9'’&.\s-]{2,60})\s+([A-Za-z\s]+,\s*Pafos|[A-Za-z\s]+,\s*Paphos)\s+Area:\s*([\s\S]*?)\s+Type:\s*([\s\S]*?)\s+(?:Off Plan|Under Construction|Completed)\s+Price range:\s*€\s*([\d.,]+)\s*k?/gi
     )
   ];
 
   const units = [];
 
   matches.forEach((match, index) => {
-    const title = cleanTitle(match[1]);
-    const location = normalizeText(match[2]);
+    const title = cleanProjectName(match[1]);
+    const location = normalizeText(match[2]).replace("Paphos", "Pafos");
     const type = normalizeText(match[4]);
-    const hasK = /k/i.test(match[0]);
+    const price = parsePrice(match[0]);
 
-    if (shouldSkipProject(title, type)) {
-      return;
-    }
-
-    const price = parsePrice(match[5], hasK);
-
-    if (!price) {
-      return;
-    }
+    if (shouldSkip(title, type)) return;
+    if (!price) return;
 
     const image =
       images[index] ||
       fallbackImage;
 
     units.push({
-      unitRef: `DOM-PAF-PRO-${index + 1}`,
+      unitRef: `DOM-${index + 1}`,
       projectName: title,
       unitTitle: title,
       location,
@@ -149,8 +121,7 @@ export async function getDomenicaProjects() {
       price,
       image,
       images: [image],
-      description:
-        `${title} is a selected Domenica Group development in ${location}. Contact us for current availability, layouts and details.`,
+      description: `${title} is a selected Domenica Group development in ${location}. Contact us for current availability, layouts and details.`,
       bedrooms: "",
       developer: "Domenica",
       source: SOURCE_URL
