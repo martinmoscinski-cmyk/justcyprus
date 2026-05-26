@@ -26,39 +26,62 @@ const cleanText = (html = "") => {
 };
 
 const getImages = (html = "") => {
-  const matches = [
-    ...html.matchAll(/https?:\/\/res2\.weblium\.site\/[^\s"'<>),]+/gi),
-    ...html.matchAll(/(?:src|data-src|data-lazy-src)=["']([^"']+\.(?:jpg|jpeg|png|webp)(?:\?[^"']*)?)["']/gi)
+  const patterns = [
+    /https?:\/\/res2\.weblium\.site\/[^\s"'<>),\\]+/gi,
+    /https?:\/\/[^"'<>),\\]+\.(?:jpg|jpeg|png|webp)(?:\?[^"'<>),\\]*)?/gi,
+    /(?:src|data-src|data-lazy-src|href)=["']([^"']+\.(?:jpg|jpeg|png|webp)(?:\?[^"']*)?)["']/gi,
+    /background-image:\s*url\(["']?([^"')]+)["']?\)/gi
   ];
 
-  return [
-    ...new Set(
-      matches
-        .map((m) => absoluteUrl(m[1] || m[0]))
-        .filter((url) => {
-          const lower = url.toLowerCase();
-          return (
-            url.startsWith("http") &&
-            !lower.includes("logo") &&
-            !lower.includes("icon") &&
-            !lower.includes("svg") &&
-            !lower.includes("favicon")
-          );
-        })
-    )
-  ].slice(0, 8);
+  const images = [];
+
+  patterns.forEach((regex) => {
+    const matches = [...html.matchAll(regex)];
+
+    matches.forEach((match) => {
+      const raw = (match[1] || match[0])
+  .replace(/&quot;/g, "")
+  .replace(/&amp;/g, "&");
+
+const url = absoluteUrl(raw);
+      const lower = url.toLowerCase();
+
+      if (
+        url.startsWith("http") &&
+        (
+          lower.includes(".jpg") ||
+          lower.includes(".jpeg") ||
+          lower.includes(".png") ||
+          lower.includes(".webp")
+        ) &&
+        !lower.includes("logo") &&
+        !lower.includes("icon") &&
+        !lower.includes("svg") &&
+        !lower.includes("favicon") &&
+        !lower.includes("placeholder")
+      ) {
+        images.push(url);
+      }
+    });
+  });
+
+  return [...new Set(images)];
 };
 
 const getProjectLinks = (html = "") => {
   const matches = [
-    ...html.matchAll(/href=["']([^"']*\/portfolio\/[^"']+)["']/gi)
+    ...html.matchAll(/href=["']([^"']+)["']/gi)
   ];
 
   return [
     ...new Set(
       matches
         .map((m) => absoluteUrl(m[1]))
-        .filter((url) => url !== SOURCE_URL)
+        .filter((url) =>
+          url.startsWith(`${BASE_URL}/portfolio/`) &&
+          url !== SOURCE_URL &&
+          !url.includes("#")
+        )
     )
   ];
 };
