@@ -69,9 +69,9 @@ function renderProjects(projects, page = 1) {
     const priceText = makePrice(project.priceFrom);
 
     const image =
-      project.images?.[0] ||
-      project.image ||
-      "images/property-1.jpg";
+  project.image ||
+  project.images?.[0] ||
+  "images/property-1.jpg";
 
     const whatsappMessage = encodeURIComponent(
       `Hi, I am interested in:\nRef: ${ref}\n${title}\n${locationText}\n${priceText}`
