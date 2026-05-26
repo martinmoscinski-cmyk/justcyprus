@@ -462,11 +462,12 @@ nav a:hover{
   box-shadow:0 40px 90px rgba(255,90,31,.18);
 }
 
-.property-card img{
-  width:100%;
-  height:260px;
-  object-fit:cover;
-  transition:.45s ease;
+.property-card img {
+  width: 100%;
+  height: 260px;
+  display: block;
+  object-fit: cover;
+  background: #f3f3f3;
 }
 
 .property-card:hover img{
