@@ -27,17 +27,18 @@ const cleanText = (html = "") => {
 
 const getImages = (html = "") => {
   const matches = [
-    ...html.matchAll(/https?:\/\/res2\.weblium\.site\/[^\s"'<>),]+/gi)
+    ...html.matchAll(/https?:\/\/res2\.weblium\.site\/[^\s"'<>),]+/gi),
+    ...html.matchAll(/(?:src|data-src|data-lazy-src)=["']([^"']+\.(?:jpg|jpeg|png|webp)(?:\?[^"']*)?)["']/gi)
   ];
 
   return [
     ...new Set(
       matches
-        .map((m) => m[0])
+        .map((m) => absoluteUrl(m[1] || m[0]))
         .filter((url) => {
           const lower = url.toLowerCase();
-
           return (
+            url.startsWith("http") &&
             !lower.includes("logo") &&
             !lower.includes("icon") &&
             !lower.includes("svg") &&
@@ -129,48 +130,70 @@ export async function getDomenicaProjects() {
   });
 
   const portfolioHtml = await response.text();
-
+  const portfolioText = cleanText(portfolioHtml);
+  const portfolioImages = getImages(portfolioHtml);
   const projectLinks = getProjectLinks(portfolioHtml);
+
+  const portfolioMatches = [
+    ...portfolioText.matchAll(
+      /([A-Z][A-Za-z0-9'’&.\s-]{2,60})\s+([A-Za-z\s]+,\s*Pafos|[A-Za-z\s]+,\s*Paphos)\s+Area:\s*([\s\S]*?)\s+Type:\s*([\s\S]*?)\s+(?:Off Plan|Under Construction|Completed)\s+Price range:\s*€\s*([\d.,]+)\s*k?/gi
+    )
+  ];
 
   const units = [];
 
-  for (let i = 0; i < projectLinks.length; i++) {
-    const link = projectLinks[i];
+  for (let i = 0; i < portfolioMatches.length; i++) {
+    const match = portfolioMatches[i];
 
-    try {
-      const projectResponse = await fetch(link, {
-        headers: {
-          "User-Agent": "Mozilla/5.0"
-        }
-      });
+    const title = cleanProjectName(match[1]);
+    const location = normalizeText(match[2]).replace("Paphos", "Pafos");
+    const type = normalizeText(match[4]);
+    const price = parsePrice(match[0]);
 
-      const projectHtml = await projectResponse.text();
-      const projectText = cleanText(projectHtml);
+    if (shouldSkip(title, type)) continue;
+    if (!price) continue;
 
-      const parsed = parseProjectFromText(projectText);
+    let images = [];
 
-      if (!parsed) continue;
-      if (shouldSkip(parsed.title, parsed.type)) continue;
-      if (!parsed.price) continue;
+    const link =
+      projectLinks.find((url) =>
+        url.toLowerCase().includes(
+          title.toLowerCase().replace(/\s+/g, "-")
+        )
+      ) || projectLinks[i];
 
-      const images = getImages(projectHtml);
-      const safeImages = images.length ? images : [fallbackImage];
+    if (link) {
+      try {
+        const projectResponse = await fetch(link, {
+          headers: {
+            "User-Agent": "Mozilla/5.0"
+          }
+        });
 
-      units.push({
-        unitRef: `DOM-${i + 1}`,
-        projectName: parsed.title,
-        unitTitle: parsed.title,
-        location: parsed.location,
-        type: parsed.type,
-        price: parsed.price,
-        image: safeImages[0],
-        images: safeImages,
-        description: `${parsed.title} is a selected Domenica Group development in ${parsed.location}. Contact us for current availability, layouts and details.`,
-        bedrooms: "",
-        developer: "Domenica",
-        source: link
-      });
-    } catch (e) {}
+        const projectHtml = await projectResponse.text();
+        images = getImages(projectHtml);
+      } catch (e) {}
+    }
+
+    const safeImages =
+      images.length
+        ? images
+        : [portfolioImages[i] || fallbackImage];
+
+    units.push({
+      unitRef: `DOM-${i + 1}`,
+      projectName: title,
+      unitTitle: title,
+      location,
+      type,
+      price,
+      image: safeImages[0],
+      images: safeImages,
+      description: `${title} is a selected Domenica Group development in ${location}. Contact us for current availability, layouts and details.`,
+      bedrooms: "",
+      developer: "Domenica",
+      source: link || SOURCE_URL
+    });
   }
 
   return units;
