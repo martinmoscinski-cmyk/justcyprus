@@ -40,10 +40,10 @@ const getImages = (html = "") => {
 
     matches.forEach((match) => {
       const raw = (match[1] || match[0])
-  .replace(/&quot;/g, "")
-  .replace(/&amp;/g, "&");
+        .replace(/&quot;/g, "")
+        .replace(/&amp;/g, "&");
 
-const url = absoluteUrl(raw);
+      const url = absoluteUrl(raw);
       const lower = url.toLowerCase();
 
       if (
@@ -130,21 +130,6 @@ const shouldSkip = (title = "", type = "") => {
   );
 };
 
-const parseProjectFromText = (text = "") => {
-  const match = text.match(
-    /([A-Z][A-Za-z0-9'’&.\s-]{2,60})\s+([A-Za-z\s]+,\s*Pafos|[A-Za-z\s]+,\s*Paphos)\s+Area:\s*([\s\S]*?)\s+Type:\s*([\s\S]*?)\s+(?:Off Plan|Under Construction|Completed)\s+Price range:\s*€\s*([\d.,]+)\s*k?/i
-  );
-
-  if (!match) return null;
-
-  return {
-    title: cleanProjectName(match[1]),
-    location: normalizeText(match[2]).replace("Paphos", "Pafos"),
-    type: normalizeText(match[4]),
-    price: parsePrice(match[0])
-  };
-};
-
 export async function getDomenicaProjects() {
   const response = await fetch(SOURCE_URL, {
     headers: {
@@ -154,7 +139,6 @@ export async function getDomenicaProjects() {
 
   const portfolioHtml = await response.text();
   const portfolioText = cleanText(portfolioHtml);
-  const portfolioImages = getImages(portfolioHtml);
   const projectLinks = getProjectLinks(portfolioHtml);
 
   const portfolioMatches = [
@@ -176,14 +160,24 @@ export async function getDomenicaProjects() {
     if (shouldSkip(title, type)) continue;
     if (!price) continue;
 
-    let images = [];
+    const titleSlug = title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
 
     const link =
-      projectLinks.find((url) =>
-        url.toLowerCase().includes(
-          title.toLowerCase().replace(/\s+/g, "-")
-        )
-      ) || projectLinks[i];
+      projectLinks.find((url) => {
+        const cleanUrl = url.toLowerCase();
+
+        return (
+          cleanUrl.includes(titleSlug) ||
+          titleSlug.split("-").some((word) =>
+            word.length > 4 && cleanUrl.includes(word)
+          )
+        );
+      }) || "";
+
+    let images = [];
 
     if (link) {
       try {
@@ -201,7 +195,7 @@ export async function getDomenicaProjects() {
     const safeImages =
       images.length
         ? images
-        : [portfolioImages[i] || fallbackImage];
+        : [fallbackImage];
 
     units.push({
       unitRef: `DOM-${i + 1}`,
