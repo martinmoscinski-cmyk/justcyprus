@@ -88,7 +88,14 @@ function renderProjects(projects, page = 1) {
           Ref: ${ref}
         </div>
 
-        <script src="script.js?v=10"></script>
+        <img
+  src="${image}"
+  alt="${title}"
+  loading="lazy"
+  decoding="async"
+  referrerpolicy="no-referrer"
+  onerror="this.onerror=null; this.src='images/property-1.jpg';"
+>
 
         <div class="property-body">
 
