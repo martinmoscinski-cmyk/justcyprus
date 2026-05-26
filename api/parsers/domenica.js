@@ -4,8 +4,16 @@ import {
   fallbackImage
 } from "./helpers.js";
 
-const SOURCE_URL =
-  "https://www.domenicagroup.com/portfolio";
+const BASE_URL = "https://www.domenicagroup.com";
+const SOURCE_URL = `${BASE_URL}/portfolio`;
+
+const absoluteUrl = (url = "") => {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  if (url.startsWith("//")) return `https:${url}`;
+  if (url.startsWith("/")) return `${BASE_URL}${url}`;
+  return `${BASE_URL}/${url}`;
+};
 
 const cleanText = (html = "") => {
   return normalizeText(
@@ -18,36 +26,41 @@ const cleanText = (html = "") => {
 };
 
 const getImages = (html = "") => {
-
   const regex =
-    /(?:src|data-src|data-lazy-src)=["']([^"']+)["']/gi;
+    /(?:src|data-src|data-lazy-src|href)=["']([^"']+\.(?:jpg|jpeg|png|webp)(?:\?[^"']*)?)["']/gi;
 
-  const matches = [...html.matchAll(regex)];
+  const getImages = (html = "") => {
+  const matches = [
+    ...html.matchAll(/https?:\/\/res2\.weblium\.site\/[^\s"'<>),]+/gi)
+  ];
 
   return [
     ...new Set(
       matches
-        .map((m) => m[1])
-        .filter((src) => {
-
-          if (!src) return false;
-
-          const lower = src.toLowerCase();
+        .map((m) => m[0])
+        .filter((url) => {
+          const lower = url.toLowerCase();
 
           return (
-            src.startsWith("http") &&
-            (
-              lower.includes(".jpg") ||
-              lower.includes(".jpeg") ||
-              lower.includes(".png") ||
-              lower.includes(".webp")
-            ) &&
             !lower.includes("logo") &&
             !lower.includes("icon") &&
             !lower.includes("svg") &&
             !lower.includes("favicon")
           );
         })
+    )
+  ].slice(0, 8);
+};
+const getProjectLinks = (html = "") => {
+  const matches = [
+    ...html.matchAll(/href=["']([^"']*\/portfolio\/[^"']+)["']/gi)
+  ];
+
+  return [
+    ...new Set(
+      matches
+        .map((m) => absoluteUrl(m[1]))
+        .filter((url) => url !== SOURCE_URL)
     )
   ];
 };
@@ -76,7 +89,9 @@ const cleanProjectName = (name = "") => {
     .replace(/\bSold\b/gi, "")
     .replace(/\bShowroom\b/gi, "")
     .replace(/\bVillas\b/gi, "")
+    .replace(/\bVilla\b/gi, "")
     .replace(/\bApartments\b/gi, "")
+    .replace(/\bApartment\b/gi, "")
     .replace(/\s+/g, " ")
     .trim();
 };
@@ -94,6 +109,21 @@ const shouldSkip = (title = "", type = "") => {
   );
 };
 
+const parseProjectFromText = (text = "") => {
+  const match = text.match(
+    /([A-Z][A-Za-z0-9'’&.\s-]{2,60})\s+([A-Za-z\s]+,\s*Pafos|[A-Za-z\s]+,\s*Paphos)\s+Area:\s*([\s\S]*?)\s+Type:\s*([\s\S]*?)\s+(?:Off Plan|Under Construction|Completed)\s+Price range:\s*€\s*([\d.,]+)\s*k?/i
+  );
+
+  if (!match) return null;
+
+  return {
+    title: cleanProjectName(match[1]),
+    location: normalizeText(match[2]).replace("Paphos", "Pafos"),
+    type: normalizeText(match[4]),
+    price: parsePrice(match[0])
+  };
+};
+
 export async function getDomenicaProjects() {
   const response = await fetch(SOURCE_URL, {
     headers: {
@@ -101,46 +131,50 @@ export async function getDomenicaProjects() {
     }
   });
 
-  const html = await response.text();
-  const text = cleanText(html);
-  const images = getImages(html);
+  const portfolioHtml = await response.text();
 
-  const matches = [
-    ...text.matchAll(
-      /([A-Z][A-Za-z0-9'’&.\s-]{2,60})\s+([A-Za-z\s]+,\s*Pafos|[A-Za-z\s]+,\s*Paphos)\s+Area:\s*([\s\S]*?)\s+Type:\s*([\s\S]*?)\s+(?:Off Plan|Under Construction|Completed)\s+Price range:\s*€\s*([\d.,]+)\s*k?/gi
-    )
-  ];
+  const projectLinks = getProjectLinks(portfolioHtml);
 
   const units = [];
 
-  matches.forEach((match, index) => {
-    const title = cleanProjectName(match[1]);
-    const location = normalizeText(match[2]).replace("Paphos", "Pafos");
-    const type = normalizeText(match[4]);
-    const price = parsePrice(match[0]);
+  for (let i = 0; i < projectLinks.length; i++) {
+    const link = projectLinks[i];
 
-    if (shouldSkip(title, type)) return;
-    if (!price) return;
+    try {
+      const projectResponse = await fetch(link, {
+        headers: {
+          "User-Agent": "Mozilla/5.0"
+        }
+      });
 
-    const image =
-      images[index] ||
-      fallbackImage;
+      const projectHtml = await projectResponse.text();
+      const projectText = cleanText(projectHtml);
 
-    units.push({
-      unitRef: `DOM-${index + 1}`,
-      projectName: title,
-      unitTitle: title,
-      location,
-      type,
-      price,
-      image,
-      images: [image],
-      description: `${title} is a selected Domenica Group development in ${location}. Contact us for current availability, layouts and details.`,
-      bedrooms: "",
-      developer: "Domenica",
-      source: SOURCE_URL
-    });
-  });
+      const parsed = parseProjectFromText(projectText);
+
+      if (!parsed) continue;
+      if (shouldSkip(parsed.title, parsed.type)) continue;
+      if (!parsed.price) continue;
+
+      const images = getImages(projectHtml).slice(0, 8);
+      const safeImages = images.length ? images : [fallbackImage];
+
+      units.push({
+        unitRef: `DOM-${i + 1}`,
+        projectName: parsed.title,
+        unitTitle: parsed.title,
+        location: parsed.location,
+        type: parsed.type,
+        price: parsed.price,
+        image: safeImages[0],
+        images: safeImages,
+        description: `${parsed.title} is a selected Domenica Group development in ${parsed.location}. Contact us for current availability, layouts and details.`,
+        bedrooms: "",
+        developer: "Domenica",
+        source: link
+      });
+    } catch (e) {}
+  }
 
   return units;
 }
