@@ -1,92 +1,117 @@
+import {
+  normalizeText,
+  normalizeProjectName,
+  fallbackImage
+} from "./helpers.js";
+
+const SOURCE_URL =
+  "https://www.domenicagroup.com/portfolio";
+
+const cleanText = (html = "") => {
+  return normalizeText(
+    html
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]*>/g, " ")
+      .replace(/&nbsp;/g, " ")
+  );
+};
+
+const parsePrice = (text = "") => {
+  const match =
+    text.match(/Price range:\s*€\s*([\d.,]+)\s*k/i) ||
+    text.match(/Price range:\s*€\s*([\d.,]+)/i);
+
+  if (!match) return 0;
+
+  let value = Number(match[1].replace(/,/g, ""));
+
+  if (/k/i.test(match[0])) {
+    value *= 1000;
+  }
+
+  return value || 0;
+};
+
+const cleanProjectName = (name = "") => {
+  return normalizeProjectName(name)
+    .replace(/\bUnder Construction\b/gi, "")
+    .replace(/\bCompleted\b/gi, "")
+    .replace(/\bFor Sale\b/gi, "")
+    .replace(/\bSold\b/gi, "")
+    .replace(/\bShowroom\b/gi, "")
+    .replace(/\bVillas\b/gi, "")
+    .replace(/\bVilla\b/gi, "")
+    .replace(/\bApartments\b/gi, "")
+    .replace(/\bApartment\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+};
+
+const shouldSkip = (title = "", type = "") => {
+  const text = `${title} ${type}`.toLowerCase();
+
+  return (
+    !title ||
+    title.length > 45 ||
+    text.includes("showroom") ||
+    text.includes("sold") ||
+    text.includes("villas apartments") ||
+    text.includes("apartments villas")
+  );
+};
+
+const fallbackByType = (type = "") => {
+  const clean = type.toLowerCase();
+
+  if (clean.includes("villa")) {
+    return "/images/fallbacks/villa.jpg";
+  }
+
+  if (clean.includes("town")) {
+    return "/images/fallbacks/townhouse.jpg";
+  }
+
+  return "/images/fallbacks/apartment.jpg";
+};
+
 export async function getDomenicaProjects() {
+
   const response = await fetch(SOURCE_URL, {
     headers: {
       "User-Agent": "Mozilla/5.0"
     }
   });
 
-  const portfolioHtml = await response.text();
-  const portfolioText = cleanText(portfolioHtml);
+  const html = await response.text();
+  const text = cleanText(html);
 
-  const projectLinks = [
-    ...new Set(
-      [
-        ...portfolioHtml.matchAll(
-          /href=["']([^"']*\/portfolio\/[^"']+)["']/gi
-        )
-      ]
-        .map((m) => absoluteUrl(m[1]))
-        .filter((url) => url !== SOURCE_URL)
-    )
-  ];
-
-  const portfolioMatches = [
-    ...portfolioText.matchAll(
+  const matches = [
+    ...text.matchAll(
       /([A-Z][A-Za-z0-9'’&.\s-]{2,60})\s+([A-Za-z\s]+,\s*Pafos|[A-Za-z\s]+,\s*Paphos)\s+Area:\s*([\s\S]*?)\s+Type:\s*([\s\S]*?)\s+(?:Off Plan|Under Construction|Completed)\s+Price range:\s*€\s*([\d.,]+)\s*k?/gi
     )
   ];
 
   const units = [];
 
-  for (let i = 0; i < portfolioMatches.length; i++) {
-
-    const match = portfolioMatches[i];
+  matches.forEach((match, index) => {
 
     const title = cleanProjectName(match[1]);
+
     const location = normalizeText(match[2])
       .replace("Paphos", "Pafos");
 
     const type = normalizeText(match[4]);
+
     const price = parsePrice(match[0]);
 
-    if (shouldSkip(title, type)) continue;
-    if (!price) continue;
+    if (shouldSkip(title, type)) return;
+    if (!price) return;
 
-    const titleSlug = title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "");
-
-    const link =
-      projectLinks.find((url) =>
-        url.toLowerCase().includes(titleSlug)
-      ) || "";
-
-    let image = fallbackImage;
-
-    if (link) {
-      try {
-
-        const projectResponse = await fetch(link, {
-          headers: {
-            "User-Agent": "Mozilla/5.0"
-          }
-        });
-
-        const projectHtml = await projectResponse.text();
-
-        const ogImage =
-          projectHtml.match(
-            /property=["']og:image["'] content=["']([^"']+)["']/i
-          )?.[1];
-
-        const twitterImage =
-          projectHtml.match(
-            /name=["']twitter:image["'] content=["']([^"']+)["']/i
-          )?.[1];
-
-        image =
-          absoluteUrl(
-            ogImage ||
-            twitterImage ||
-            fallbackImage
-          );
-
-      } catch (e) {}
-    }
+    const image = fallbackByType(type);
 
     units.push({
-      unitRef: `DOM-${i + 1}`,
+      unitRef: `DOM-${index + 1}`,
       projectName: title,
       unitTitle: title,
       location,
@@ -98,9 +123,10 @@ export async function getDomenicaProjects() {
         `${title} is a selected Domenica Group development in ${location}. Contact us for current availability, layouts and details.`,
       bedrooms: "",
       developer: "Domenica",
-      source: link || SOURCE_URL
+      source: SOURCE_URL
     });
-  }
+
+  });
 
   return units;
 }
