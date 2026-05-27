@@ -1,0 +1,14 @@
+{
+  "name": "justcyprus-vercel-2-0",
+  "version": "1.0.0",
+  "main": "script.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@sparticuz/chromium": "^138.0.2",
+    "@vercel/blob": "^1.1.1",
+    "puppeteer-core": "^24.10.2"
+  }
+}
