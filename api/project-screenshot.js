@@ -52,13 +52,13 @@ export default async function handler(req, res) {
       fs.readFileSync("/tmp/project.jpg");
 
     const blob =
-      await put(
-        `projects/${Date.now()}.jpg`,
-        buffer,
-        {
-          access: "private"
-        }
-      );
+  await put(
+    `projects/${Date.now()}.jpg`,
+    buffer,
+    {
+      access: "public"
+    }
+  );
 
     return res.status(200).json({
       success: true,
