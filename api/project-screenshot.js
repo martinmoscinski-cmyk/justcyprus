@@ -56,7 +56,7 @@ export default async function handler(req, res) {
         `projects/${Date.now()}.jpg`,
         buffer,
         {
-          access: "public"
+          access: "private"
         }
       );
 
