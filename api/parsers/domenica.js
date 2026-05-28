@@ -1,17 +1,13 @@
-import fs from "fs";
-import path from "path";
-
 import {
   normalizeText,
   normalizeProjectName,
   fallbackImage
 } from "./helpers.js";
 
+import domenicaImages from "./domenica-images.js";
+
 const SOURCE_URL =
   "https://www.domenicagroup.com/portfolio";
-
-const LOCAL_IMAGES_PATH =
-  path.join(process.cwd(), "images", "DOMENICA");
 
 const cleanText = (html = "") => {
   return normalizeText(
@@ -31,13 +27,34 @@ const projectSlug = (text = "") => {
 };
 
 const parsePrice = (text = "") => {
+
+  const villaMatch =
+    text.match(
+      /Home Price Range\s*€?\s*([\d.,]+)\s*k/i
+    );
+
+  const apartmentMatch =
+    text.match(
+      /Apartment Price Range\s*€?\s*([\d.,]+)\s*k/i
+    );
+
+  const genericMatch =
+    text.match(
+      /Price range:\s*€?\s*([\d.,]+)\s*k/i
+    );
+
   const match =
-    text.match(/Price range:\s*€\s*([\d.,]+)\s*k/i) ||
-    text.match(/Price range:\s*€\s*([\d.,]+)/i);
+    apartmentMatch ||
+    villaMatch ||
+    genericMatch;
 
   if (!match) return 0;
 
-  let value = Number(match[1].replace(/,/g, ""));
+  let value =
+    Number(
+      match[1]
+        .replace(/,/g, "")
+    );
 
   if (/k/i.test(match[0])) {
     value *= 1000;
@@ -62,150 +79,129 @@ const cleanProjectName = (name = "") => {
 };
 
 const shouldSkip = (title = "", type = "") => {
-  const text = `${title} ${type}`.toLowerCase();
+
+  const text =
+    `${title} ${type}`.toLowerCase();
 
   return (
     !title ||
     title.length > 45 ||
     text.includes("showroom") ||
-    text.includes("sold") ||
-    text.includes("villas apartments") ||
-    text.includes("apartments villas")
+    text.includes("sold")
   );
 };
 
-const isImage = (file = "") => {
-  return /\.(jpg|jpeg|png|webp)$/i.test(file);
-};
-
-const scoreImage = (imagePath = "") => {
-  const clean = imagePath.toLowerCase();
-
-  let score = 0;
-
-  if (clean.includes("exterior")) score += 100;
-  if (clean.includes("renders")) score += 60;
-  if (clean.includes("day")) score += 40;
-  if (clean.includes("afternoon")) score += 30;
-
-  if (clean.includes("cover")) score += 200;
-  if (clean.includes("main")) score += 150;
-  if (clean.includes("front")) score += 80;
-  if (clean.includes("hero")) score += 80;
-
-  if (clean.includes("interior")) score -= 50;
-  if (clean.includes("floor")) score -= 100;
-  if (clean.includes("plan")) score -= 100;
-
-  return score;
-};
-
 const getProjectImages = (title = "") => {
-  try {
-    if (!fs.existsSync(LOCAL_IMAGES_PATH)) return [];
 
-    const wantedSlug = projectSlug(title);
+  return (
+    domenicaImages[
+      projectSlug(title)
+    ] || {
+      cover: fallbackImage,
+      images: []
+    }
+  );
 
-    const folders = fs.readdirSync(LOCAL_IMAGES_PATH);
-
-    const matchedFolder = folders.find((folder) => {
-      return projectSlug(folder) === wantedSlug;
-    });
-
-    if (!matchedFolder) return [];
-
-    const projectPath =
-      path.join(LOCAL_IMAGES_PATH, matchedFolder);
-
-    const images = [];
-
-    const scan = (folderPath) => {
-      const items = fs.readdirSync(folderPath);
-
-      items.forEach((item) => {
-        const fullPath = path.join(folderPath, item);
-        const stat = fs.statSync(fullPath);
-
-        if (stat.isDirectory()) {
-          scan(fullPath);
-          return;
-        }
-
-        if (!isImage(item)) return;
-
-        const publicPath =
-          fullPath
-            .replace(process.cwd(), "")
-            .replaceAll("\\", "/");
-
-        images.push(publicPath);
-      });
-    };
-
-    scan(projectPath);
-
-    return images.sort((a, b) => {
-      return scoreImage(b) - scoreImage(a);
-    });
-
-  } catch {
-    return [];
-  }
 };
 
 export async function getDomenicaProjects() {
-  const response = await fetch(SOURCE_URL, {
-    headers: {
-      "User-Agent": "Mozilla/5.0"
-    }
-  });
 
-  const html = await response.text();
-  const text = cleanText(html);
+  const response = await fetch(
+    SOURCE_URL,
+    {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0"
+      }
+    }
+  );
+
+  const html =
+    await response.text();
+
+  const text =
+    cleanText(html);
 
   const matches = [
     ...text.matchAll(
-      /([A-Z][A-Za-z0-9'’&.\s-]{2,60})\s+([A-Za-z\s]+,\s*Pafos|[A-Za-z\s]+,\s*Paphos)\s+Area:\s*([\s\S]*?)\s+Type:\s*([\s\S]*?)\s+(?:Off Plan|Under Construction|Completed)\s+Price range:\s*€\s*([\d.,]+)\s*k?/gi
+      /([A-Z][A-Za-z0-9'’&.\s-]{2,60})\s+([A-Za-z\s]+,\s*Pafos|[A-Za-z\s]+,\s*Paphos)\s+Area:\s*([\s\S]*?)\s+Type:\s*([\s\S]*?)\s+(?:Off Plan|Under Construction|Completed)\s+([\s\S]*?)(?=Gallery|$)/gi
     )
   ];
 
   const units = [];
 
   matches.forEach((match, index) => {
-    const title = cleanProjectName(match[1]);
 
-    const location = normalizeText(match[2])
-      .replace("Paphos", "Pafos");
+    const title =
+      cleanProjectName(match[1]);
 
-    const type = normalizeText(match[4]);
-    const price = parsePrice(match[0]);
+    const location =
+      normalizeText(match[2])
+        .replace("Paphos", "Pafos");
 
-    if (shouldSkip(title, type)) return;
-    if (!price) return;
+    const type =
+      normalizeText(match[4]);
 
-    const images = getProjectImages(title);
+    const price =
+      parsePrice(match[0]);
 
-    if (!images.length) {
+    if (
+      shouldSkip(title, type)
+    ) {
       return;
     }
 
-    const image = images[0];
+    if (!price) {
+      return;
+    }
+
+    const gallery =
+      getProjectImages(title);
+
+    if (
+      !gallery.images.length
+    ) {
+      return;
+    }
+
+    const image =
+      gallery.cover;
 
     units.push({
-      unitRef: `DOM-${index + 1}`,
-      projectName: title,
-      unitTitle: title,
+
+      unitRef:
+        `DOM-${index + 1}`,
+
+      projectName:
+        title,
+
+      unitTitle:
+        title,
+
       location,
+
       type,
+
       price,
+
       image,
-      images,
+
+      images:
+        gallery.images,
+
       description:
-        `${title} is a selected Domenica Group development in ${location}. Contact us for current availability, layouts and details.`,
+        `${title} is a selected development in ${location}. Contact us for current availability, layouts and details.`,
+
       bedrooms: "",
-      developer: "Domenica",
-      source: SOURCE_URL
+
+      developer:
+        "Domenica",
+
+      source:
+        SOURCE_URL
+
     });
+
   });
 
   return units;
