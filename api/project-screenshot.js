@@ -43,7 +43,7 @@ export default async function handler(req, res) {
       timeout: 60000
     });
 
-    await page.waitForTimeout(2000);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
     const screenshot = await page.screenshot({
       type: "jpeg",
