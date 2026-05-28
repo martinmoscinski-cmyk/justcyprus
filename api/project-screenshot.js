@@ -1,30 +1,37 @@
 import puppeteer from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 import { put } from "@vercel/blob";
+import { getCachedImage, setCachedImage } from "./screenshot-cache.js";
 
 export default async function handler(req, res) {
-
   try {
-
-    const url =
-      req.query.url;
+    const url = req.query.url;
 
     if (!url) {
-      return res
-        .status(400)
-        .json({ error: "Missing url" });
+      return res.status(400).json({
+        success: false,
+        error: "Missing url"
+      });
     }
 
-    const browser =
-      await puppeteer.launch({
-        args: chromium.args,
-        executablePath:
-          await chromium.executablePath(),
-        headless: true
-      });
+    const cacheKey = String(url);
+    const cachedImage = getCachedImage(cacheKey);
 
-    const page =
-      await browser.newPage();
+    if (cachedImage) {
+      return res.status(200).json({
+        success: true,
+        cached: true,
+        image: cachedImage
+      });
+    }
+
+    const browser = await puppeteer.launch({
+      args: chromium.args,
+      executablePath: await chromium.executablePath(),
+      headless: true
+    });
+
+    const page = await browser.newPage();
 
     await page.setViewport({
       width: 1400,
@@ -36,8 +43,9 @@ export default async function handler(req, res) {
       timeout: 60000
     });
 
-    await page.screenshot({
-      path: "/tmp/project.jpg",
+    await page.waitForTimeout(2000);
+
+    const screenshot = await page.screenshot({
       type: "jpeg",
       quality: 80,
       fullPage: false
@@ -45,32 +53,26 @@ export default async function handler(req, res) {
 
     await browser.close();
 
-    const fs =
-      await import("fs");
+    const blob = await put(
+      `projects/${Date.now()}.jpg`,
+      screenshot,
+      {
+        access: "public"
+      }
+    );
 
-    const buffer =
-      fs.readFileSync("/tmp/project.jpg");
-
-    const blob =
-  await put(
-    `projects/${Date.now()}.jpg`,
-    buffer,
-    {
-      access: "public"
-    }
-  );
+    setCachedImage(cacheKey, blob.url);
 
     return res.status(200).json({
       success: true,
+      cached: false,
       image: blob.url
     });
 
   } catch (e) {
-
     return res.status(500).json({
       success: false,
       error: e.message
     });
-
   }
 }
