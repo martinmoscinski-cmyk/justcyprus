@@ -1,208 +1,249 @@
-import {
-  normalizeText,
-  normalizeProjectName,
-  fallbackImage
-} from "./helpers.js";
+import fs from "fs";
+import path from "path";
+import * as cheerio from "cheerio";
 
-import domenicaImages from "./domenica-images.js";
-
-const SOURCE_URL =
+const DOMENICA_URL =
   "https://www.domenicagroup.com/portfolio";
 
-const cleanText = (html = "") => {
-  return normalizeText(
-    html
-      .replace(/<script[\s\S]*?<\/script>/gi, " ")
-      .replace(/<style[\s\S]*?<\/style>/gi, " ")
-      .replace(/<[^>]*>/g, " ")
-      .replace(/&nbsp;/g, " ")
-  );
-};
+function slugify(text = "") {
 
-const projectSlug = (text = "") => {
-  return normalizeProjectName(text)
+  return text
     .toLowerCase()
+    .replace(/&/g, "and")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
-};
 
-const parsePrice = (text = "") => {
+}
 
-  const villaMatch =
-    text.match(
-      /Home Price Range\s*€?\s*([\d.,]+)\s*k/i
-    );
+function imageScore(file) {
 
-  const apartmentMatch =
-    text.match(
-      /Apartment Price Range\s*€?\s*([\d.,]+)\s*k/i
-    );
+  const clean =
+    file.toLowerCase();
 
-  const genericMatch =
-    text.match(
-      /Price range:\s*€?\s*([\d.,]+)\s*k/i
-    );
+  let score = 0;
 
-  const match =
-    apartmentMatch ||
-    villaMatch ||
-    genericMatch;
+  if (clean.includes("external")) score += 500;
+  if (clean.includes("exterior")) score += 500;
 
-  if (!match) return 0;
+  if (clean.includes("renders")) score += 200;
 
-  let value =
-    Number(
-      match[1]
-        .replace(/,/g, "")
-    );
+  if (clean.includes("day")) score += 100;
+  if (clean.includes("afternoon")) score += 80;
 
-  if (/k/i.test(match[0])) {
-    value *= 1000;
+  if (clean.includes("cover")) score += 1000;
+  if (clean.includes("hero")) score += 900;
+  if (clean.includes("main")) score += 800;
+  if (clean.includes("front")) score += 700;
+
+  if (clean.includes("internal")) score -= 200;
+  if (clean.includes("interior")) score -= 200;
+
+  if (clean.includes("plan")) score -= 500;
+  if (clean.includes("floor")) score -= 500;
+
+  return score;
+
+}
+
+function getProjectImages(projectSlug) {
+
+  const basePath = path.join(
+    process.cwd(),
+    "images",
+    "DOMENICA"
+  );
+
+  if (!fs.existsSync(basePath)) {
+    return null;
   }
 
-  return value || 0;
-};
+  const folders =
+    fs.readdirSync(basePath);
 
-const cleanProjectName = (name = "") => {
-  return normalizeProjectName(name)
-    .replace(/\bUnder Construction\b/gi, "")
-    .replace(/\bCompleted\b/gi, "")
-    .replace(/\bFor Sale\b/gi, "")
-    .replace(/\bSold\b/gi, "")
-    .replace(/\bShowroom\b/gi, "")
-    .replace(/\bVillas\b/gi, "")
-    .replace(/\bVilla\b/gi, "")
-    .replace(/\bApartments\b/gi, "")
-    .replace(/\bApartment\b/gi, "")
-    .replace(/\s+/g, " ")
-    .trim();
-};
+  const matchedFolder =
+    folders.find((folder) => {
 
-const shouldSkip = (title = "", type = "") => {
+      return (
+        slugify(folder) ===
+        projectSlug
+      );
 
-  const text =
-    `${title} ${type}`.toLowerCase();
+    });
 
-  return (
-    !title ||
-    title.length > 45 ||
-    text.includes("showroom") ||
-    text.includes("sold")
-  );
-};
+  if (!matchedFolder) {
+    return null;
+  }
 
-const getProjectImages = (title = "") => {
-
-  return (
-    domenicaImages[
-      projectSlug(title)
-    ] || {
-      cover: fallbackImage,
-      images: []
-    }
+  const projectPath = path.join(
+    basePath,
+    matchedFolder
   );
 
-};
+  const imageFiles = [];
+
+  function scan(dir) {
+
+    const items =
+      fs.readdirSync(dir);
+
+    items.forEach((item) => {
+
+      const fullPath =
+        path.join(dir, item);
+
+      const stat =
+        fs.statSync(fullPath);
+
+      if (stat.isDirectory()) {
+
+        scan(fullPath);
+
+      } else {
+
+        const lower =
+          item.toLowerCase();
+
+        if (
+          lower.endsWith(".jpg") ||
+          lower.endsWith(".jpeg") ||
+          lower.endsWith(".png") ||
+          lower.endsWith(".webp")
+        ) {
+
+          const relativePath =
+            fullPath
+              .replace(process.cwd(), "")
+              .replaceAll("\\", "/");
+
+          imageFiles.push(
+            relativePath
+          );
+
+        }
+
+      }
+
+    });
+
+  }
+
+  scan(projectPath);
+
+  if (!imageFiles.length) {
+    return null;
+  }
+
+  imageFiles.sort(
+    (a, b) =>
+      imageScore(b) -
+      imageScore(a)
+  );
+
+  return {
+    cover:
+      imageFiles[0],
+
+    images:
+      imageFiles
+  };
+
+}
 
 export async function getDomenicaProjects() {
 
-  const response = await fetch(
-    SOURCE_URL,
-    {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0"
-      }
-    }
-  );
+  const response =
+    await fetch(DOMENICA_URL);
 
   const html =
     await response.text();
 
-  const text =
-    cleanText(html);
+  const $ =
+    cheerio.load(html);
 
-  const matches = [
-    ...text.matchAll(
-      /([A-Z][A-Za-z0-9'’&.\s-]{2,60})\s+([A-Za-z\s]+,\s*Pafos|[A-Za-z\s]+,\s*Paphos)\s+Area:\s*([\s\S]*?)\s+Type:\s*([\s\S]*?)\s+(?:Off Plan|Under Construction|Completed)\s+([\s\S]*?)(?=Gallery|$)/gi
-    )
-  ];
+  const projects = [];
 
-  const units = [];
+  $(".portfolio-item").each(
+    (index, el) => {
 
-  matches.forEach((match, index) => {
+      const title =
+        $(el)
+          .find("h3")
+          .first()
+          .text()
+          .trim();
 
-    const title =
-      cleanProjectName(match[1]);
+      if (!title) return;
 
-    const location =
-      normalizeText(match[2])
-        .replace("Paphos", "Pafos");
+      const slug =
+        slugify(title);
 
-    const type =
-      normalizeText(match[4]);
+      const gallery =
+        getProjectImages(slug);
 
-    const price =
-      parsePrice(match[0]);
+      if (!gallery) {
+        return;
+      }
 
-    if (
-      shouldSkip(title, type)
-    ) {
-      return;
+      const text =
+        $(el).text();
+
+      const priceMatch =
+        text.match(
+          /€\s?([\d,.]+k?)/i
+        );
+
+      if (!priceMatch) {
+        return;
+      }
+
+      const location =
+        $(el)
+          .find(".location")
+          .text()
+          .trim() ||
+        "Pafos";
+
+      const cleanPrice =
+        priceMatch[1]
+          .replace(/,/g, "")
+          .replace("k", "000");
+
+      projects.push({
+
+        unitRef:
+          `DOM-${index + 1}`,
+
+        projectName:
+          title,
+
+        unitTitle:
+          title,
+
+        location,
+
+        type:
+          "Apartment",
+
+        price:
+          Number(cleanPrice),
+
+        image:
+          gallery.cover,
+
+        images:
+          gallery.images,
+
+        description:
+          `${title} development in ${location}. Contact us for current availability and layouts.`,
+
+        developer:
+          "Domenica"
+
+      });
+
     }
+  );
 
-    if (!price) {
-      return;
-    }
+  return projects;
 
-    const gallery =
-      getProjectImages(title);
-
-    if (
-      !gallery.images.length
-    ) {
-      return;
-    }
-
-    const image =
-      gallery.cover;
-
-    units.push({
-
-      unitRef:
-        `DOM-${index + 1}`,
-
-      projectName:
-        title,
-
-      unitTitle:
-        title,
-
-      location,
-
-      type,
-
-      price,
-
-      image,
-
-      images:
-        gallery.images,
-
-      description:
-        `${title} is a selected development in ${location}. Contact us for current availability, layouts and details.`,
-
-      bedrooms: "",
-
-      developer:
-        "Domenica",
-
-      source:
-        SOURCE_URL
-
-    });
-
-  });
-
-  return units;
 }
