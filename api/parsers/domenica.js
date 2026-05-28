@@ -4,8 +4,16 @@ import {
   fallbackImage
 } from "./helpers.js";
 
-const SOURCE_URL =
-  "https://www.domenicagroup.com/portfolio";
+const BASE_URL = "https://www.domenicagroup.com";
+const SOURCE_URL = `${BASE_URL}/portfolio`;
+
+const absoluteUrl = (url = "") => {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  if (url.startsWith("//")) return `https:${url}`;
+  if (url.startsWith("/")) return `${BASE_URL}${url}`;
+  return `${BASE_URL}/${url}`;
+};
 
 const cleanText = (html = "") => {
   return normalizeText(
@@ -14,6 +22,44 @@ const cleanText = (html = "") => {
       .replace(/<style[\s\S]*?<\/style>/gi, " ")
       .replace(/<[^>]*>/g, " ")
       .replace(/&nbsp;/g, " ")
+  );
+};
+
+const getProjectLinks = (html = "") => {
+  const matches = [
+    ...html.matchAll(/href=["']([^"']*\/portfolio\/[^"']+)["']/gi)
+  ];
+
+  return [
+    ...new Set(
+      matches
+        .map((m) => absoluteUrl(m[1]))
+        .filter((url) =>
+          url.startsWith(`${BASE_URL}/portfolio/`) &&
+          url !== SOURCE_URL &&
+          !url.includes("#")
+        )
+    )
+  ];
+};
+
+const makeSlug = (text = "") => {
+  return String(text)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+};
+
+const findProjectLink = (title = "", links = []) => {
+  const slug = makeSlug(title);
+  const words = slug.split("-").filter((word) => word.length > 3);
+
+  return (
+    links.find((url) => url.toLowerCase().includes(slug)) ||
+    links.find((url) =>
+      words.some((word) => url.toLowerCase().includes(word))
+    ) ||
+    ""
   );
 };
 
@@ -75,8 +121,12 @@ const fallbackByType = (type = "") => {
   return "/images/fallbacks/apartment.jpg";
 };
 
-export async function getDomenicaProjects() {
+const screenshotImageUrl = (projectUrl = "") => {
+  if (!projectUrl) return "";
+  return `/api/project-screenshot?url=${encodeURIComponent(projectUrl)}`;
+};
 
+export async function getDomenicaProjects() {
   const response = await fetch(SOURCE_URL, {
     headers: {
       "User-Agent": "Mozilla/5.0"
@@ -85,6 +135,7 @@ export async function getDomenicaProjects() {
 
   const html = await response.text();
   const text = cleanText(html);
+  const projectLinks = getProjectLinks(html);
 
   const matches = [
     ...text.matchAll(
@@ -95,20 +146,19 @@ export async function getDomenicaProjects() {
   const units = [];
 
   matches.forEach((match, index) => {
-
     const title = cleanProjectName(match[1]);
 
     const location = normalizeText(match[2])
       .replace("Paphos", "Pafos");
 
     const type = normalizeText(match[4]);
-
     const price = parsePrice(match[0]);
 
     if (shouldSkip(title, type)) return;
     if (!price) return;
 
-    const image = fallbackByType(type);
+    const projectUrl = findProjectLink(title, projectLinks);
+    const image = screenshotImageUrl(projectUrl) || fallbackByType(type);
 
     units.push({
       unitRef: `DOM-${index + 1}`,
@@ -123,9 +173,8 @@ export async function getDomenicaProjects() {
         `${title} is a selected Domenica Group development in ${location}. Contact us for current availability, layouts and details.`,
       bedrooms: "",
       developer: "Domenica",
-      source: SOURCE_URL
+      source: projectUrl || SOURCE_URL
     });
-
   });
 
   return units;
