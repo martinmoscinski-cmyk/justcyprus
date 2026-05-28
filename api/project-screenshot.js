@@ -4,6 +4,8 @@ import { put } from "@vercel/blob";
 import { getCachedImage, setCachedImage } from "./screenshot-cache.js";
 
 export default async function handler(req, res) {
+  let browser;
+
   try {
     const url = req.query.url;
 
@@ -18,14 +20,10 @@ export default async function handler(req, res) {
     const cachedImage = getCachedImage(cacheKey);
 
     if (cachedImage) {
-      return res.status(200).json({
-        success: true,
-        cached: true,
-        image: cachedImage
-      });
+      return res.redirect(302, cachedImage);
     }
 
-    const browser = await puppeteer.launch({
+    browser = await puppeteer.launch({
       args: chromium.args,
       executablePath: await chromium.executablePath(),
       headless: true
@@ -51,8 +49,6 @@ export default async function handler(req, res) {
       fullPage: false
     });
 
-    await browser.close();
-
     const blob = await put(
       `projects/${Date.now()}.jpg`,
       screenshot,
@@ -63,16 +59,16 @@ export default async function handler(req, res) {
 
     setCachedImage(cacheKey, blob.url);
 
-    return res.status(200).json({
-      success: true,
-      cached: false,
-      image: blob.url
-    });
+    return res.redirect(302, blob.url);
 
   } catch (e) {
     return res.status(500).json({
       success: false,
       error: e.message
     });
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
   }
 }
