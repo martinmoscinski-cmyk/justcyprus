@@ -1,21 +1,17 @@
+import fs from "fs";
+import path from "path";
+
 import {
   normalizeText,
   normalizeProjectName,
   fallbackImage
 } from "./helpers.js";
 
-const BASE_URL = "https://www.domenicagroup.com";
-const SOURCE_URL = `${BASE_URL}/portfolio`;
+const SOURCE_URL =
+  "https://www.domenicagroup.com/portfolio";
 
-const absoluteUrl = (url = "") => {
-  if (!url) return "";
-
-  if (url.startsWith("http")) return url;
-  if (url.startsWith("//")) return `https:${url}`;
-  if (url.startsWith("/")) return `${BASE_URL}${url}`;
-
-  return `${BASE_URL}/${url}`;
-};
+const LOCAL_IMAGES_PATH =
+  path.join(process.cwd(), "images", "DOMENICA");
 
 const cleanText = (html = "") => {
   return normalizeText(
@@ -27,53 +23,11 @@ const cleanText = (html = "") => {
   );
 };
 
-const makeSlug = (text = "") => {
-  return String(text)
+const projectSlug = (text = "") => {
+  return normalizeProjectName(text)
     .toLowerCase()
-    .replace(/https?:\/\//g, "")
-    .replace(/www\./g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
-};
-
-const getProjectLinks = (html = "") => {
-  const matches = [
-    ...html.matchAll(/href=["']([^"']+)["']/gi)
-  ];
-
-  return [
-    ...new Set(
-      matches
-        .map((m) => absoluteUrl(m[1]))
-        .filter((url) =>
-          url.includes("/portfolio/") &&
-          url !== SOURCE_URL &&
-          !url.includes("#")
-        )
-    )
-  ];
-};
-
-const findProjectLink = (title = "", links = []) => {
-  const slug = makeSlug(title);
-
-  const words = slug
-    .split("-")
-    .filter((word) => word.length > 2);
-
-  return (
-    links.find((url) =>
-      makeSlug(url).includes(slug)
-    ) ||
-
-    links.find((url) =>
-      words.some((word) =>
-        makeSlug(url).includes(word)
-      )
-    ) ||
-
-    ""
-  );
 };
 
 const parsePrice = (text = "") => {
@@ -120,24 +74,83 @@ const shouldSkip = (title = "", type = "") => {
   );
 };
 
-const fallbackByType = (type = "") => {
-  const clean = type.toLowerCase();
-
-  if (clean.includes("villa")) {
-    return "/images/fallbacks/villa.jpg";
-  }
-
-  if (clean.includes("town")) {
-    return "/images/fallbacks/townhouse.jpg";
-  }
-
-  return fallbackImage || "/images/fallbacks/apartment.jpg";
+const isImage = (file = "") => {
+  return /\.(jpg|jpeg|png|webp)$/i.test(file);
 };
 
-const screenshotImageUrl = (projectUrl = "") => {
-  if (!projectUrl) return "";
+const scoreImage = (imagePath = "") => {
+  const clean = imagePath.toLowerCase();
 
-  return `/api/project-screenshot?url=${encodeURIComponent(projectUrl)}`;
+  let score = 0;
+
+  if (clean.includes("exterior")) score += 100;
+  if (clean.includes("renders")) score += 60;
+  if (clean.includes("day")) score += 40;
+  if (clean.includes("afternoon")) score += 30;
+
+  if (clean.includes("cover")) score += 200;
+  if (clean.includes("main")) score += 150;
+  if (clean.includes("front")) score += 80;
+  if (clean.includes("hero")) score += 80;
+
+  if (clean.includes("interior")) score -= 50;
+  if (clean.includes("floor")) score -= 100;
+  if (clean.includes("plan")) score -= 100;
+
+  return score;
+};
+
+const getProjectImages = (title = "") => {
+  try {
+    if (!fs.existsSync(LOCAL_IMAGES_PATH)) return [];
+
+    const wantedSlug = projectSlug(title);
+
+    const folders = fs.readdirSync(LOCAL_IMAGES_PATH);
+
+    const matchedFolder = folders.find((folder) => {
+      return projectSlug(folder) === wantedSlug;
+    });
+
+    if (!matchedFolder) return [];
+
+    const projectPath =
+      path.join(LOCAL_IMAGES_PATH, matchedFolder);
+
+    const images = [];
+
+    const scan = (folderPath) => {
+      const items = fs.readdirSync(folderPath);
+
+      items.forEach((item) => {
+        const fullPath = path.join(folderPath, item);
+        const stat = fs.statSync(fullPath);
+
+        if (stat.isDirectory()) {
+          scan(fullPath);
+          return;
+        }
+
+        if (!isImage(item)) return;
+
+        const publicPath =
+          fullPath
+            .replace(process.cwd(), "")
+            .replaceAll("\\", "/");
+
+        images.push(publicPath);
+      });
+    };
+
+    scan(projectPath);
+
+    return images.sort((a, b) => {
+      return scoreImage(b) - scoreImage(a);
+    });
+
+  } catch {
+    return [];
+  }
 };
 
 export async function getDomenicaProjects() {
@@ -149,7 +162,6 @@ export async function getDomenicaProjects() {
 
   const html = await response.text();
   const text = cleanText(html);
-  const projectLinks = getProjectLinks(html);
 
   const matches = [
     ...text.matchAll(
@@ -171,11 +183,13 @@ export async function getDomenicaProjects() {
     if (shouldSkip(title, type)) return;
     if (!price) return;
 
-    const projectUrl = findProjectLink(title, projectLinks);
+    const images = getProjectImages(title);
 
-    const image =
-      screenshotImageUrl(projectUrl) ||
-      fallbackByType(type);
+    if (!images.length) {
+      return;
+    }
+
+    const image = images[0];
 
     units.push({
       unitRef: `DOM-${index + 1}`,
@@ -185,12 +199,12 @@ export async function getDomenicaProjects() {
       type,
       price,
       image,
-      images: [image],
+      images,
       description:
         `${title} is a selected Domenica Group development in ${location}. Contact us for current availability, layouts and details.`,
       bedrooms: "",
       developer: "Domenica",
-      source: projectUrl || SOURCE_URL
+      source: SOURCE_URL
     });
   });
 
