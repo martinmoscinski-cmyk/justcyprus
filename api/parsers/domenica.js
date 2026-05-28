@@ -9,9 +9,11 @@ const SOURCE_URL = `${BASE_URL}/portfolio`;
 
 const absoluteUrl = (url = "") => {
   if (!url) return "";
+
   if (url.startsWith("http")) return url;
   if (url.startsWith("//")) return `https:${url}`;
   if (url.startsWith("/")) return `${BASE_URL}${url}`;
+
   return `${BASE_URL}/${url}`;
 };
 
@@ -25,9 +27,18 @@ const cleanText = (html = "") => {
   );
 };
 
+const makeSlug = (text = "") => {
+  return String(text)
+    .toLowerCase()
+    .replace(/https?:\/\//g, "")
+    .replace(/www\./g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+};
+
 const getProjectLinks = (html = "") => {
   const matches = [
-    ...html.matchAll(/href=["']([^"']*\/portfolio\/[^"']+)["']/gi)
+    ...html.matchAll(/href=["']([^"']+)["']/gi)
   ];
 
   return [
@@ -35,7 +46,7 @@ const getProjectLinks = (html = "") => {
       matches
         .map((m) => absoluteUrl(m[1]))
         .filter((url) =>
-          url.startsWith(`${BASE_URL}/portfolio/`) &&
+          url.includes("/portfolio/") &&
           url !== SOURCE_URL &&
           !url.includes("#")
         )
@@ -43,22 +54,24 @@ const getProjectLinks = (html = "") => {
   ];
 };
 
-const makeSlug = (text = "") => {
-  return String(text)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-};
-
 const findProjectLink = (title = "", links = []) => {
   const slug = makeSlug(title);
-  const words = slug.split("-").filter((word) => word.length > 3);
+
+  const words = slug
+    .split("-")
+    .filter((word) => word.length > 2);
 
   return (
-    links.find((url) => url.toLowerCase().includes(slug)) ||
     links.find((url) =>
-      words.some((word) => url.toLowerCase().includes(word))
+      makeSlug(url).includes(slug)
     ) ||
+
+    links.find((url) =>
+      words.some((word) =>
+        makeSlug(url).includes(word)
+      )
+    ) ||
+
     ""
   );
 };
@@ -118,11 +131,12 @@ const fallbackByType = (type = "") => {
     return "/images/fallbacks/townhouse.jpg";
   }
 
-  return "/images/fallbacks/apartment.jpg";
+  return fallbackImage || "/images/fallbacks/apartment.jpg";
 };
 
 const screenshotImageUrl = (projectUrl = "") => {
   if (!projectUrl) return "";
+
   return `/api/project-screenshot?url=${encodeURIComponent(projectUrl)}`;
 };
 
@@ -158,7 +172,10 @@ export async function getDomenicaProjects() {
     if (!price) return;
 
     const projectUrl = findProjectLink(title, projectLinks);
-    const image = screenshotImageUrl(projectUrl) || fallbackByType(type);
+
+    const image =
+      screenshotImageUrl(projectUrl) ||
+      fallbackByType(type);
 
     units.push({
       unitRef: `DOM-${index + 1}`,
