@@ -34,6 +34,8 @@ export default async function handler(req, res) {
   getGiovaniProjects()
 ]);
 
+console.log("GIOVANI COUNT:", giovani.length);
+
     const allUnits = [
   ...aristo,
   ...pafilia,
