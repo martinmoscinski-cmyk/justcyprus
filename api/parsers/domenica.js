@@ -50,7 +50,6 @@ function getProjectImages(projectSlug) {
   const basePath = path.join(
     process.cwd(),
     "images",
-    "DOMENICA"
   );
 
   if (!fs.existsSync(basePath)) {
