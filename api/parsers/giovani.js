@@ -1,3 +1,5 @@
+import { put, list } from "@vercel/blob";
+
 import {
   normalizeText,
   normalizeProjectName,
@@ -23,6 +25,16 @@ const cleanText = (html = "") => {
       .replace(/<[^>]*>/g, " ")
       .replace(/\s+/g, " ")
   );
+};
+
+const slugify = (text = "") => {
+  return String(text)
+    .toLowerCase()
+    .replace(/https?:\/\//g, "")
+    .replace(/www\./g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 90);
 };
 
 const extractPrice = (text = "") => {
@@ -102,6 +114,65 @@ const runInBatches = async (items, size, handler) => {
   return results;
 };
 
+const getBlobImage = async (imageUrl = "", projectKey = "") => {
+  if (!imageUrl || imageUrl === fallbackImage) {
+    return fallbackImage;
+  }
+
+  try {
+    const safeKey = slugify(projectKey || imageUrl);
+    const prefix = `giovani/${safeKey}`;
+
+    const existing = await list({
+      prefix,
+      limit: 1
+    });
+
+    if (existing.blobs?.[0]?.url) {
+      return existing.blobs[0].url;
+    }
+
+    const imageResponse = await fetch(imageUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0"
+      }
+    });
+
+    if (!imageResponse.ok) {
+      return imageUrl;
+    }
+
+    const contentType =
+      imageResponse.headers.get("content-type") || "image/jpeg";
+
+    const ext =
+      contentType.includes("png")
+        ? "png"
+        : contentType.includes("webp")
+          ? "webp"
+          : "jpg";
+
+    const buffer = Buffer.from(
+      await imageResponse.arrayBuffer()
+    );
+
+    const blob = await put(
+      `${prefix}.${ext}`,
+      buffer,
+      {
+        access: "public",
+        contentType,
+        addRandomSuffix: false
+      }
+    );
+
+    return blob.url;
+
+  } catch {
+    return imageUrl || fallbackImage;
+  }
+};
+
 export async function getGiovaniProjects() {
   const pages = [];
 
@@ -154,7 +225,12 @@ export async function getGiovaniProjects() {
         else if (lower.includes("penthouse")) type = "Penthouse";
         else if (lower.includes("office")) type = "Office";
 
-        const image = extractImage(html);
+        const originalImage = extractImage(html);
+
+        const image = await getBlobImage(
+          originalImage,
+          `${title}-${location}`
+        );
 
         return {
           unitRef: `GIO-${index + 1}`,
