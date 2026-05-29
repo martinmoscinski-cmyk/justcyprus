@@ -6,19 +6,17 @@ import {
 
 export async function getGiovaniProjects() {
 
-  console.log("GIOVANI START");
-
   return [
     {
-      unitRef: "GIO-TEST-1",
+      unitRef: "GIO-1",
       projectName: "Giovani Test",
       unitTitle: "Giovani Test",
       location: "Paralimni",
       type: "Apartment",
-      price: 150000,
-      image: fallbackImage,
-      images: [fallbackImage],
-      description: "Test project",
+      price: 123456,
+      image: "https://via.placeholder.com/800x600",
+      images: ["https://via.placeholder.com/800x600"],
+      description: "test",
       bedrooms: "",
       developer: "Giovani",
       source: "https://giovani.cy"
