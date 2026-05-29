@@ -5,95 +5,172 @@ import {
 } from "./helpers.js";
 
 const BASE_URL = "https://giovani.cy";
-const MAX_PAGES = 2;
 
-const cleanText = (html = "") => {
+const absoluteUrl = (url = "") => {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  if (url.startsWith("/")) return `${BASE_URL}${url}`;
+  return `${BASE_URL}/${url}`;
+};
+
+const cleanText = (html) => {
   return normalizeText(
     html
       .replace(/<script[\s\S]*?<\/script>/gi, " ")
       .replace(/<style[\s\S]*?<\/style>/gi, " ")
       .replace(/<[^>]*>/g, " ")
+  );
+};
+
+const extractPrice = (text) => {
+  const match = text.match(/€\s*([\d,]+)/i);
+  if (!match) return 0;
+  return Number(match[1].replace(/,/g, ""));
+};
+
+const extractCity = (html, text, url = "") => {
+  const cityMatch = text.match(/City:\s*([A-Za-z\s-]+)\s+Zip:/i);
+
+  if (cityMatch?.[1]) {
+    const city = normalizeText(cityMatch[1]).trim();
+
+    if (city.toLowerCase() !== "famagusta") {
+      return city;
+    }
+  }
+
+  const lowerUrl = url.toLowerCase();
+
+  if (lowerUrl.includes("larnaca")) return "Larnaca";
+  if (lowerUrl.includes("protaras")) return "Protaras";
+  if (lowerUrl.includes("pernera")) return "Pernera";
+  if (lowerUrl.includes("kapparis")) return "Kapparis";
+  if (lowerUrl.includes("ayia-napa") || lowerUrl.includes("agia-napa")) return "Ayia Napa";
+  if (lowerUrl.includes("cape-greco")) return "Cape Greco";
+  if (lowerUrl.includes("deryneia")) return "Deryneia";
+  if (lowerUrl.includes("sotira")) return "Sotira";
+  if (lowerUrl.includes("paralimni")) return "Paralimni";
+
+  return "";
+};
+
+const extractTitle = (html, text) => {
+  const h1 =
+    html.match(/<h1[^>]*>(.*?)<\/h1>/i)?.[1] ||
+    text.split("€")[0];
+
+  return normalizeProjectName(
+    normalizeText(h1)
+      .replace(/Available/i, "")
+      .replace(/\s+(APARTMENT|VILLA|HOUSE|UNIT|OFFICE|PENTHOUSE)\s*[A-Z]?\d+[A-Z]?$/i, "")
+      .replace(/\s+[A-Z]\d{2,4}$/i, "")
+      .replace(/\s+\d{2,4}$/i, "")
       .replace(/\s+/g, " ")
   );
 };
 
-const extractLocation = (text = "") => {
-  const lower = text.toLowerCase();
+const extractImage = (html) => {
+  const og =
+    html.match(/property="og:image"\s+content="([^"]+)"/i)?.[1];
 
-  if (lower.includes("larnaca")) return "Larnaca";
-  if (lower.includes("protaras")) return "Protaras";
-  if (lower.includes("pernera")) return "Pernera";
-  if (lower.includes("kapparis")) return "Kapparis";
-  if (lower.includes("ayia napa") || lower.includes("agia napa")) return "Ayia Napa";
-  if (lower.includes("paralimni")) return "Paralimni";
+  if (og) return absoluteUrl(og);
 
-  return "Famagusta";
-};
-
-const extractType = (title = "", text = "") => {
-  const lower = `${title} ${text}`.toLowerCase();
-
-  if (lower.includes("villa")) return "Villa";
-  if (lower.includes("office")) return "Office";
-  if (lower.includes("shop")) return "Shop";
-  if (lower.includes("penthouse")) return "Penthouse";
-  if (lower.includes("apartment")) return "Apartment";
-
-  return "Property";
+  return fallbackImage;
 };
 
 export async function getGiovaniProjects() {
+  const pages = [];
+
+for (let i = 1; i <= 20; i++) {
+  if (i === 1) {
+    pages.push("https://giovani.cy/properties/");
+  } else {
+    pages.push(
+      `https://giovani.cy/properties/page/${i}/`
+    );
+  }
+}
+
+  const allLinks = [];
+
+  for (const page of pages) {
+    try {
+      const response = await fetch(page, {
+        headers: {
+          "User-Agent": "Mozilla/5.0"
+        }
+      });
+
+      const html = await response.text();
+
+      const links = [
+        ...html.matchAll(/href="([^"]*\/property\/[^"]+)"/gi)
+      ].map((m) => absoluteUrl(m[1]));
+
+      allLinks.push(...links);
+    } catch (e) {}
+  }
+
+  const uniqueLinks = [...new Set(allLinks)];
+
   const units = [];
 
-  for (let page = 1; page <= MAX_PAGES; page++) {
-    const url =
-      page === 1
-        ? `${BASE_URL}/properties/`
-        : `${BASE_URL}/properties/page/${page}/`;
+  for (let i = 0; i < uniqueLinks.length; i++) {
+    const link = uniqueLinks[i];
 
-    const response = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0" }
-    });
+    try {
+      const response = await fetch(link, {
+        headers: {
+          "User-Agent": "Mozilla/5.0"
+        }
+      });
 
-    const html = await response.text();
-    const text = cleanText(html);
+      const html = await response.text();
+      const text = cleanText(html);
 
-    const matches = [
-  ...text.matchAll(
-    /€\s*([\d,]+)\s*\+VAT\s+####\s+([A-Z0-9][A-Z0-9\s.'’,-]{3,80})/g
-  )
-];
+      const location = extractCity(html, text, link);
 
-    matches.forEach((match, index) => {
-      const price = Number(match[1].replace(/,/g, ""));
-      if (!price || price < 50000) return;
+      if (!location) continue;
 
-      const title = normalizeProjectName(
-        normalizeText(match[2])
-          .replace(/\s+/g, " ")
-          .trim()
-      );
+      const title = extractTitle(html, text);
 
-      if (!title || title.length < 3) return;
+      if (!title || title.length < 3) continue;
 
-      const location = extractLocation(title);
-      const type = extractType(title, text);
+      const price = extractPrice(text);
+
+      if (price < 50000) continue;
+
+      let type = "Property";
+
+      const lower = text.toLowerCase();
+
+      if (lower.includes("apartment")) {
+        type = "Apartment";
+      } else if (lower.includes("villa")) {
+        type = "Villa";
+      } else if (lower.includes("penthouse")) {
+        type = "Penthouse";
+      } else if (lower.includes("office")) {
+        type = "Office";
+      }
+
+      const image = extractImage(html);
 
       units.push({
-        unitRef: `GIO-${page}-${index + 1}`,
+        unitRef: `GIO-${i + 1}`,
         projectName: title,
         unitTitle: title,
         location,
         type,
         price,
-        image: fallbackImage,
-        images: [fallbackImage],
-        description: `${title} is a selected Giovani property in ${location}. Contact us for current availability, layouts and details.`,
+        image,
+        images: [image],
+        description: `${title} is a selected Giovani development in ${location}. Contact us for current availability, layouts and details.`,
         bedrooms: "",
         developer: "Giovani",
-        source: url
+        source: link
       });
-    });
+    } catch (e) {}
   }
 
   return units;
