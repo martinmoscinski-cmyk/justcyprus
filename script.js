@@ -3,7 +3,7 @@ const resultsPerPage = 6;
 let currentMatched = [];
 
 async function fetchProjects() {
-  const response = await fetch("/api/cache-properties");
+  const response = await fetch("/api/properties");
   const data = await response.json();
   return data.projects || [];
 }
