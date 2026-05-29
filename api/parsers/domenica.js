@@ -25,6 +25,10 @@ const slugify = (text = "") =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 
+const fixImagePath = (imagePath = "") => {
+  return imagePath.replace("/images/DOMENICA/", "/images/");
+};
+
 const cleanProjectName = (name = "") => {
   return normalizeProjectName(name)
     .replace(/\bUnder Construction\b/gi, "")
@@ -70,8 +74,7 @@ const shouldSkip = (title = "", type = "") => {
 };
 
 const getGallery = (title = "") => {
-  const slug = slugify(title);
-  return domenicaImages[slug] || null;
+  return domenicaImages[slugify(title)] || null;
 };
 
 export async function getDomenicaProjects() {
@@ -110,6 +113,12 @@ export async function getDomenicaProjects() {
       return;
     }
 
+    const image =
+      fixImagePath(gallery.cover || gallery.images[0] || fallbackImage);
+
+    const images =
+      gallery.images.map(fixImagePath);
+
     units.push({
       unitRef: `DOM-${index + 1}`,
       projectName: title,
@@ -117,8 +126,8 @@ export async function getDomenicaProjects() {
       location,
       type,
       price,
-      image: gallery.cover || gallery.images[0] || fallbackImage,
-      images: gallery.images,
+      image,
+      images,
       description: `${title} is a selected development in ${location}. Contact us for current availability, layouts and details.`,
       bedrooms: "",
       developer: "Domenica",
