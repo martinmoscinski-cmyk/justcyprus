@@ -7,6 +7,15 @@ import {
 const BASE_URL = "https://giovani.cy";
 const MAX_PAGES = 2;
 
+const cleanText = (html = "") =>
+  normalizeText(
+    html
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]*>/g, " ")
+      .replace(/\s+/g, " ")
+  );
+
 const absoluteUrl = (url = "") => {
   if (!url) return "";
   if (url.startsWith("http")) return url;
@@ -14,53 +23,15 @@ const absoluteUrl = (url = "") => {
   return `${BASE_URL}/${url}`;
 };
 
-const cleanText = (html = "") => {
-  return normalizeText(
-    html
-      .replace(/<script[\s\S]*?<\/script>/gi, " ")
-      .replace(/<style[\s\S]*?<\/style>/gi, " ")
-      .replace(/<[^>]*>/g, " ")
-      .replace(/\s+/g, " ")
-  );
-};
-
-const extractPrice = (text = "") => {
-  const match = text.match(/€\s*([\d,]+)/i);
-  if (!match) return 0;
-  return Number(match[1].replace(/,/g, "")) || 0;
-};
-
-const extractTitle = (html = "", text = "") => {
-  const h1 =
-    html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)?.[1] ||
-    html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ||
-    text.split("€")[0];
-
-  return normalizeProjectName(
-    normalizeText(h1)
-      .replace(/Available/gi, "")
-      .replace(/Giovani Homes/gi, "")
-      .replace(/\|/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-  );
-};
-
-const extractImage = (html = "") => {
-  const og =
-    html.match(/property=["']og:image["']\s+content=["']([^"']+)["']/i)?.[1] ||
-    html.match(/content=["']([^"']+)["']\s+property=["']og:image["']/i)?.[1];
-
-  if (og) return absoluteUrl(og);
-
+const extractImageFromBlock = (block = "") => {
   const img =
-    html.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1];
+    block.match(/<img[^>]+(?:src|data-src)=["']([^"']+)["']/i)?.[1];
 
   return img ? absoluteUrl(img) : fallbackImage;
 };
 
-const extractLocation = (text = "", url = "") => {
-  const lower = `${text} ${url}`.toLowerCase();
+const extractLocation = (text = "") => {
+  const lower = text.toLowerCase();
 
   if (lower.includes("larnaca")) return "Larnaca";
   if (lower.includes("protaras")) return "Protaras";
@@ -80,72 +51,67 @@ const extractType = (text = "") => {
 
   if (lower.includes("villa")) return "Villa";
   if (lower.includes("penthouse")) return "Penthouse";
+  if (lower.includes("shop")) return "Shop";
   if (lower.includes("office")) return "Office";
   if (lower.includes("apartment")) return "Apartment";
 
   return "Property";
 };
 
-const fetchHtml = async (url) => {
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "Mozilla/5.0"
-    }
-  });
-
-  if (!response.ok) return "";
-
-  return response.text();
-};
-
 export async function getGiovaniProjects() {
-  const pages = [];
-
-  for (let i = 1; i <= MAX_PAGES; i++) {
-    pages.push(
-      i === 1
-        ? "https://giovani.cy/properties/"
-        : `https://giovani.cy/properties/page/${i}/`
-    );
-  }
-
-  const links = [];
-
-  for (const page of pages) {
-    const html = await fetchHtml(page);
-
-    const found = [
-      ...html.matchAll(/href=["']([^"']*\/property\/[^"']+)["']/gi)
-    ].map((m) => absoluteUrl(m[1]));
-
-    links.push(...found);
-  }
-
-  const uniqueLinks = [...new Set(links)];
-
   const units = [];
 
-  for (let i = 0; i < uniqueLinks.length; i++) {
-    const link = uniqueLinks[i];
+  for (let pageNo = 1; pageNo <= MAX_PAGES; pageNo++) {
+    const url =
+      pageNo === 1
+        ? `${BASE_URL}/properties/`
+        : `${BASE_URL}/properties/page/${pageNo}/`;
 
-    try {
-      const html = await fetchHtml(link);
-      if (!html) continue;
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0"
+      }
+    });
 
-      const text = cleanText(html);
+    const html = await response.text();
 
-      const price = extractPrice(text);
-      if (!price || price < 50000) continue;
+    const blocks =
+      html.match(/<div[^>]+class=["'][^"']*(?:property|listing)[^"']*["'][\s\S]*?(?=<div[^>]+class=["'][^"']*(?:property|listing)|<\/main>|<\/body>)/gi) || [];
 
-      const title = extractTitle(html, text);
-      if (!title || title.length < 3) continue;
+    blocks.forEach((block, index) => {
+      const text = cleanText(block);
 
-      const location = extractLocation(text, link);
+      const priceMatch = text.match(/€\s*([\d,]+)/i);
+      if (!priceMatch) return;
+
+      const price = Number(priceMatch[1].replace(/,/g, ""));
+      if (!price || price < 50000) return;
+
+      const titleMatch =
+        block.match(/<h4[^>]*>\s*<a[^>]*>([\s\S]*?)<\/a>/i) ||
+        block.match(/<h3[^>]*>\s*<a[^>]*>([\s\S]*?)<\/a>/i) ||
+        block.match(/<h4[^>]*>([\s\S]*?)<\/h4>/i) ||
+        block.match(/<h3[^>]*>([\s\S]*?)<\/h3>/i);
+
+      if (!titleMatch) return;
+
+      const title = normalizeProjectName(
+        normalizeText(titleMatch[1])
+          .replace(/\s+/g, " ")
+          .trim()
+      );
+
+      if (!title || title.length < 3) return;
+
+      const link =
+        block.match(/href=["']([^"']+)["']/i)?.[1] || url;
+
+      const image = extractImageFromBlock(block);
+      const location = extractLocation(text);
       const type = extractType(text);
-      const image = extractImage(html);
 
       units.push({
-        unitRef: `GIO-${i + 1}`,
+        unitRef: `GIO-${pageNo}-${index + 1}`,
         projectName: title,
         unitTitle: title,
         location,
@@ -156,10 +122,9 @@ export async function getGiovaniProjects() {
         description: `${title} is a selected Giovani development in ${location}. Contact us for current availability, layouts and details.`,
         bedrooms: "",
         developer: "Giovani",
-        source: link
+        source: absoluteUrl(link)
       });
-
-    } catch (e) {}
+    });
   }
 
   return units;
