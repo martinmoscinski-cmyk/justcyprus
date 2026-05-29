@@ -60,7 +60,7 @@ export async function getGiovaniProjects() {
 
     const matches = [
   ...text.matchAll(
-    /€\s*([\d,]+)\s*\+VAT\s+####\s+(.+?)\s{2,}/g
+    /€\s*([\d,]+)\s*\+VAT\s+####\s+([A-Z0-9][A-Z0-9\s.'’,-]{3,80})/g
   )
 ];
 
