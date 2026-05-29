@@ -59,10 +59,10 @@ export async function getGiovaniProjects() {
     const text = cleanText(html);
 
     const matches = [
-      ...text.matchAll(
-        /€\s*([\d,]+)\s*\+VAT\s+([A-Z][A-Z0-9\s.'’-]{3,80}?)(?=\s+[A-Z][a-z]|\s+\d|\s+Agent:|\s+€|$)/g
-      )
-    ];
+  ...text.matchAll(
+    /€\s*([\d,]+)\s*\+VAT\s+####\s+(.+?)\s{2,}/g
+  )
+];
 
     matches.forEach((match, index) => {
       const price = Number(match[1].replace(/,/g, ""));
