@@ -5,6 +5,7 @@ import {
 } from "./helpers.js";
 
 const BASE_URL = "https://giovani.cy";
+const MAX_PAGES = 2;
 
 const absoluteUrl = (url = "") => {
   if (!url) return "";
@@ -81,7 +82,7 @@ const extractImage = (html) => {
 export async function getGiovaniProjects() {
   const pages = [];
 
-for (let i = 1; i <= 20; i++) {
+for (let i = 1; i <= MAX_PAGES; i++) {
   if (i === 1) {
     pages.push("https://giovani.cy/properties/");
   } else {

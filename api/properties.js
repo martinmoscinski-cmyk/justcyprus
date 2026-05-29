@@ -2,6 +2,7 @@ import { getAristoProjects } from "./parsers/aristo.js";
 import { getPafiliaProjects } from "./parsers/pafilia.js";
 import { getDomenicaProjects } from "./parsers/domenica.js";
 import { getLumaProjects } from "./parsers/luma.js";
+import { getGiovaniProjects } from "./parsers/giovani.js";
 
 export const config = {
   runtime: "nodejs"
@@ -20,23 +21,26 @@ export default async function handler(req, res) {
   try {
 
     const [
-      aristo,
-      pafilia,
-      domenica,
-      luma
-    ] = await Promise.all([
-      getAristoProjects(),
-      getPafiliaProjects(),
-      getDomenicaProjects(),
-      getLumaProjects()
-    ]);
+  aristo,
+  pafilia,
+  domenica,
+  luma,
+  giovani
+] = await Promise.all([
+  getAristoProjects(),
+  getPafiliaProjects(),
+  getDomenicaProjects(),
+  getLumaProjects(),
+  getGiovaniProjects()
+]);
 
     const allUnits = [
-      ...aristo,
-      ...pafilia,
-      ...domenica,
-      ...luma
-    ];
+  ...aristo,
+  ...pafilia,
+  ...domenica,
+  ...luma,
+  ...giovani
+];
 
     const grouped = {};
 
