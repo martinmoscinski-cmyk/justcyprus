@@ -19,45 +19,32 @@ const normalizeProjectName = (text = "") => {
 
 export default async function handler(req, res) {
   try {
-
-    const [
-  aristo,
-  pafilia,
-  domenica,
-  luma,
-  giovani
-] = await Promise.all([
-  getAristoProjects(),
-  getPafiliaProjects(),
-  getDomenicaProjects(),
-  getLumaProjects(),
-  getGiovaniProjects()
-]);
-
-console.log("GIOVANI COUNT:", giovani.length);
+    const [aristo, pafilia, domenica, luma, giovani] = await Promise.all([
+      getAristoProjects(),
+      getPafiliaProjects(),
+      getDomenicaProjects(),
+      getLumaProjects(),
+      getGiovaniProjects()
+    ]);
 
     const allUnits = [
-  ...aristo,
-  ...pafilia,
-  ...domenica,
-  ...luma,
-  ...giovani
-];
+      ...aristo,
+      ...pafilia,
+      ...domenica,
+      ...luma,
+      ...giovani
+    ];
 
     const grouped = {};
 
     allUnits.forEach((unit) => {
+      const cleanProjectName = normalizeProjectName(unit.projectName);
 
-      const cleanProjectName =
-        normalizeProjectName(unit.projectName);
-
-      const key =
-        `${unit.developer}-${cleanProjectName}-${unit.location}`
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-");
+      const key = `${unit.developer}-${cleanProjectName}-${unit.location}`
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-");
 
       if (!grouped[key]) {
-
         grouped[key] = {
           projectId: key,
           ref: `${unit.unitRef}-PROJECT`,
@@ -67,40 +54,26 @@ console.log("GIOVANI COUNT:", giovani.length);
           priceFrom: unit.price || 0,
           image: unit.image,
           images: [],
-          description:
-            `${cleanProjectName} is a selected development in ${unit.location}. Contact us for current availability, layouts and details.`,
+          description: `${cleanProjectName} is a selected development in ${unit.location}. Contact us for current availability, layouts and details.`,
           unitsCount: 0,
           units: [],
           developer: unit.developer,
           source: unit.source
         };
-
       }
 
       grouped[key].units.push(unit);
       grouped[key].unitsCount += 1;
 
-      if (
-        unit.price &&
-        (
-          !grouped[key].priceFrom ||
-          unit.price < grouped[key].priceFrom
-        )
-      ) {
+      if (unit.price && (!grouped[key].priceFrom || unit.price < grouped[key].priceFrom)) {
         grouped[key].priceFrom = unit.price;
       }
 
       unit.images?.forEach((img) => {
-
-        if (
-          img &&
-          !grouped[key].images.includes(img)
-        ) {
+        if (img && !grouped[key].images.includes(img)) {
           grouped[key].images.push(img);
         }
-
       });
-
     });
 
     const projects = Object.values(grouped)
@@ -118,20 +91,14 @@ console.log("GIOVANI COUNT:", giovani.length);
       totalProjects: projects.length,
       totalUnits: allUnits.length,
       locations: [
-        ...new Set(
-          projects
-            .map((p) => p.location)
-            .filter(Boolean)
-        )
+        ...new Set(projects.map((p) => p.location).filter(Boolean))
       ].sort()
     });
 
   } catch (error) {
-
     res.status(500).json({
       success: false,
       error: error.message
     });
-
   }
 }
