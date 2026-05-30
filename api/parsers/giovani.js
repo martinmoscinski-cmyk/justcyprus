@@ -7,7 +7,7 @@ import {
 } from "./helpers.js";
 
 const BASE_URL = "https://giovani.cy";
-const MAX_PAGES = 2;
+const MAX_PAGES = 20;
 const CONCURRENCY = 6;
 
 const absoluteUrl = (url = "") => {
