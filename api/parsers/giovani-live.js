@@ -44,27 +44,22 @@ const extractPrice = (text = "") => {
 };
 
 const extractCity = (html, text, url = "") => {
-  const addressCity =
-    text.match(/Address:\s*[^]*?City:\s*([^,]+?)\s*,\s*([A-Za-z\s-]+?)\s+(?:Zip:|Country:)/i) ||
-    text.match(/City:\s*([^,]+?)\s*,\s*([A-Za-z\s-]+?)\s+(?:Zip:|Country:)/i);
+  const cityBlock =
+    text.match(/City:\s*(.*?)\s+(?:Zip:|Country:|Open In Google Maps|Map)/i)?.[1];
 
-  if (addressCity?.[2]) {
-    const actualCity = normalizeText(addressCity[2]).trim();
+  if (cityBlock) {
+    const parts = cityBlock
+      .split(",")
+      .map((part) => normalizeText(part).trim())
+      .filter(Boolean);
 
-    if (actualCity) {
+    const actualCity = parts[parts.length - 1];
+
+    if (
+      actualCity &&
+      actualCity.toLowerCase() !== "famagusta"
+    ) {
       return actualCity;
-    }
-  }
-
-  const simpleCity =
-    text.match(/Address:\s*[^]*?City:\s*([A-Za-z\s-]+?)\s+(?:Zip:|Country:)/i) ||
-    text.match(/City:\s*([A-Za-z\s-]+?)\s+(?:Zip:|Country:)/i);
-
-  if (simpleCity?.[1]) {
-    const city = normalizeText(simpleCity[1]).trim();
-
-    if (city.toLowerCase() !== "famagusta") {
-      return city;
     }
   }
 
