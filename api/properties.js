@@ -10,11 +10,10 @@ export const config = {
 
 const normalizeProjectName = (text = "") => {
   return String(text)
+    .replace(/\s+V\d+$/i, "")
+    .replace(/\s+\d+$/i, "")
     .replace(/\b(APARTMENT|VILLA|HOUSE|UNIT|OFFICE|PENTHOUSE|SHOP)\b\s*[A-Z]?\d+[A-Z]?$/i, "")
-    .replace(/\b(APARTMENT|VILLA|HOUSE|UNIT|OFFICE|PENTHOUSE|SHOP)\b\s*\d+$/i, "")
-    .replace(/\s+(NO\.?|NUMBER)\s*\d+$/i, "")
     .replace(/\s+[A-Z]\d{2,4}$/i, "")
-    .replace(/\s+\d{2,4}$/i, "")
     .replace(/\s+/g, " ")
     .trim();
 };
