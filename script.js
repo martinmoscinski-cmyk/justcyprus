@@ -20,12 +20,24 @@ function cleanText(text) {
     .replace(/\s*-\s*$/g, "")
     .trim();
 }
+
 function normalizeLocation(text) {
   return cleanText(text)
     .toLowerCase()
     .replaceAll("paphos", "pafos")
+    .replaceAll("pafos", "pafos")
     .replaceAll("geroskipou hills", "pafos")
     .replaceAll("geroskipou", "pafos");
+}
+
+function normalizeLocationForDropdown(location) {
+  const clean = cleanText(location)
+    .replaceAll("Pafos", "Paphos");
+
+  if (clean.includes("Paphos")) return "Paphos";
+  if (clean.includes("Limassol")) return "Limassol";
+
+  return clean;
 }
 
 function makePrice(price) {
@@ -69,9 +81,9 @@ function renderProjects(projects, page = 1) {
     const priceText = makePrice(project.priceFrom);
 
     const image =
-  project.image ||
-  project.images?.[0] ||
-  "images/property-1.jpg";
+      project.image ||
+      project.images?.[0] ||
+      "images/property-1.jpg";
 
     const whatsappMessage = encodeURIComponent(
       `Hi, I am interested in:\nRef: ${ref}\n${title}\n${locationText}\n${priceText}`
@@ -89,13 +101,13 @@ function renderProjects(projects, page = 1) {
         </div>
 
         <img
-  src="${image}"
-  alt="${title}"
-  loading="lazy"
-  decoding="async"
-  referrerpolicy="no-referrer"
-  onerror="this.onerror=null; this.src='images/property-1.jpg';"
->
+          src="${image}"
+          alt="${title}"
+          loading="lazy"
+          decoding="async"
+          referrerpolicy="no-referrer"
+          onerror="this.onerror=null; this.src='images/property-1.jpg';"
+        >
 
         <div class="property-body">
 
@@ -110,10 +122,10 @@ function renderProjects(projects, page = 1) {
             <div>
               <div class="price">${priceText}</div>
               <small class="units">
-  ${["Domenica", "Luma"].includes(project.developer)
-  ? "Availability on request"
-  : `${project.unitsCount || 0} units available`}
-</small>
+                ${["Domenica", "Luma"].includes(project.developer)
+                  ? "Availability on request"
+                  : `${project.unitsCount || 0} units available`}
+              </small>
             </div>
 
             <div class="card-actions">
@@ -163,24 +175,51 @@ function renderProjects(projects, page = 1) {
   }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   const form = document.getElementById("propertySearch");
 
   if (!form) return;
+
+  const projects = await fetchProjects();
+
+  const locationSelect = document.getElementById("location");
+
+  if (locationSelect) {
+    const locations = [
+      ...new Set(
+        projects
+          .map((project) =>
+            normalizeLocationForDropdown(project.location)
+          )
+          .filter(Boolean)
+      )
+    ].sort();
+
+    locationSelect.innerHTML = `
+      <option value="">All locations</option>
+      ${locations
+        .map((location) => {
+          return `
+            <option value="${location}">
+              ${location}
+            </option>
+          `;
+        })
+        .join("")}
+    `;
+  }
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const location = normalizeLocation(
-  document.getElementById("location").value
-);
-    const type = document.getElementById("type").value.toLowerCase();
-    const budgetValue =
-  document.getElementById("budget").value;
-const sortValue =
-  document.getElementById("sort").value;
+      document.getElementById("location").value
+    );
 
-    const projects = await fetchProjects();
+    const type = document.getElementById("type").value.toLowerCase();
+    const budgetValue = document.getElementById("budget").value;
+    const sortValue = document.getElementById("sort").value;
+
     const results = document.getElementById("results");
     const pagination = document.getElementById("pagination");
 
@@ -188,82 +227,77 @@ const sortValue =
     if (pagination) pagination.innerHTML = "";
 
     const matched = projects.filter((project) => {
+      const projectLocation = normalizeLocation(project.location);
+      const projectType = cleanText(project.type).toLowerCase();
+      const projectPrice = Number(project.priceFrom || 0);
 
-  const projectLocation =
-    normalizeLocation(project.location);
+      if (!projectPrice) {
+        return false;
+      }
 
-  const projectType =
-    cleanText(project.type).toLowerCase();
+      const locationMatch =
+        !location ||
+        projectLocation.includes(location);
 
-  const projectPrice =
-    Number(project.priceFrom || 0);
+      const typeMatch =
+        !type ||
+        projectType.includes(type);
 
-  if (!projectPrice) {
-    return false;
-  }
+      let matchesBudget = true;
 
-  const locationMatch =
-    !location ||
-    projectLocation.includes(location);
+      if (budgetValue) {
+        const [minBudget, maxBudget] =
+          budgetValue.split("-").map(Number);
 
-  const typeMatch =
-    !type ||
-    projectType.includes(type);
+        matchesBudget =
+          projectPrice >= minBudget &&
+          projectPrice <= maxBudget;
+      }
 
-  let matchesBudget = true;
+      return (
+        locationMatch &&
+        typeMatch &&
+        matchesBudget
+      );
+    });
 
-  if (budgetValue) {
+    if (sortValue === "price-low") {
+      matched.sort((a, b) => a.priceFrom - b.priceFrom);
+    }
 
-    const [minBudget, maxBudget] =
-      budgetValue.split("-").map(Number);
+    if (sortValue === "price-high") {
+      matched.sort((a, b) => b.priceFrom - a.priceFrom);
+    }
 
-    matchesBudget =
-      projectPrice >= minBudget &&
-      projectPrice <= maxBudget;
-  }
+    if (sortValue === "name") {
+      matched.sort((a, b) =>
+        cleanText(a.title).localeCompare(
+          cleanText(b.title)
+        )
+      );
+    }
 
-  return (
-    locationMatch &&
-    typeMatch &&
-    matchesBudget
-  );
-});
-if (sortValue === "price-low") {
-  matched.sort((a, b) => a.priceFrom - b.priceFrom);
-}
-
-if (sortValue === "price-high") {
-  matched.sort((a, b) => b.priceFrom - a.priceFrom);
-}
-
-if (sortValue === "name") {
-  matched.sort((a, b) =>
-    cleanText(a.title).localeCompare(
-      cleanText(b.title)
-    )
-  );
-}
+    const resultsCount = document.getElementById("resultsCount");
 
     if (matched.length === 0) {
-  const resultsCount = document.getElementById("resultsCount");
+      if (resultsCount) {
+        resultsCount.innerText = "0 projects found";
+      }
 
-  if (resultsCount) {
-    resultsCount.innerText = "0 projects found";
-  }
+      results.innerHTML = `<p>No matching projects found.</p>`;
+      return;
+    }
 
-  results.innerHTML = `<p>No matching projects found.</p>`;
-  return;
-}
-const resultsCount = document.getElementById("resultsCount");
+    if (resultsCount) {
+      resultsCount.innerText = `${matched.length} projects found`;
+    }
 
-if (resultsCount) {
-  resultsCount.innerText = `${matched.length} projects found`;
-}
     currentMatched = matched;
     currentPage = 1;
     renderProjects(currentMatched, currentPage);
   });
 });
+
 document.addEventListener("change", (e) => {
   if (e.target.id !== "sort") return;
   if (!currentMatched.length) return;
