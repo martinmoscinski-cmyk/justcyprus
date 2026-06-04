@@ -44,22 +44,18 @@ const extractPrice = (text = "") => {
 };
 
 const extractCity = (html, text, url = "") => {
-  const cityParts =
-    text.match(/City:\s*([^,\n]+)\s*,\s*([A-Za-z\s-]+)(?:\s+Country:|\s+Zip:|\s|$)/i);
+  const addressCity =
+    text.match(/Address\s+City:\s*([^,]+?)\s*,\s*([A-Za-z\s-]+?)\s+Country:/i) ||
+    text.match(/City:\s*([^,]+?)\s*,\s*([A-Za-z\s-]+?)\s+Country:/i);
 
-  if (cityParts?.[2]) {
-    const actualCity = normalizeText(cityParts[2]).trim();
-
-    if (actualCity) {
-      return actualCity;
-    }
+  if (addressCity?.[2]) {
+    return normalizeText(addressCity[2]).trim();
   }
 
-  // reszta Twojej obecnej funkcji...
-
   const simpleCity =
-    text.match(/City:\s*([A-Za-z\s-]+)\s+Country:/i) ||
-    text.match(/City:\s*([A-Za-z\s-]+)\s+Zip:/i);
+    text.match(/Address\s+City:\s*([A-Za-z\s-]+?)\s+Country:/i) ||
+    text.match(/City:\s*([A-Za-z\s-]+?)\s+Country:/i) ||
+    text.match(/City:\s*([A-Za-z\s-]+?)\s+Zip:/i);
 
   if (simpleCity?.[1]) {
     const city = normalizeText(simpleCity[1]).trim();
