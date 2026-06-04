@@ -1336,3 +1336,10 @@ nav a:hover{
   }
 
 }
+.property-hero{
+  height:420px !important;
+}
+
+.property-gallery img{
+  height:120px !important;
+}
