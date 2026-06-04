@@ -1,17 +1,32 @@
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Property Details</title>
-</head>
-
 <body>
 
-  <h1 id="title">Loading...</h1>
+  <main class="property-page">
+    <a href="/" class="back-link">← Back to properties</a>
 
-<script src="property-details.js"></script>
+    <section class="property-hero">
+      <img id="heroImage" src="images/property-1.jpg" alt="">
+    </section>
+
+    <section class="property-details">
+      <p id="location"></p>
+      <h1 id="title">Loading...</h1>
+      <h2 id="price"></h2>
+      <p id="description"></p>
+
+      <div id="meta"></div>
+
+      <div class="card-actions">
+        <a id="whatsappBtn" class="card-btn">WhatsApp</a>
+        <a id="emailBtn" class="card-btn secondary-card-btn">Request details</a>
+      </div>
+    </section>
+
+    <section>
+      <h2>Gallery</h2>
+      <div id="gallery"></div>
+    </section>
+  </main>
+
+  <script src="property-details.js"></script>
+
 </body>
-
-</html>
