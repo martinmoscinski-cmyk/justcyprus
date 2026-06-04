@@ -41,8 +41,9 @@ export default async function handler(req, res) {
 
     allUnits.forEach((unit) => {
       const cleanProjectName = normalizeProjectName(unit.projectName);
+const cleanLocation = normalizeLocation(unit.location);
 
-      const key = `${unit.developer}-${cleanProjectName}-${unit.location}`
+      const key = `${unit.developer}-${cleanProjectName}-${cleanLocation}`
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-");
 
@@ -51,7 +52,7 @@ export default async function handler(req, res) {
           projectId: key,
           ref: `${unit.unitRef}-PROJECT`,
           title: cleanProjectName,
-          location: unit.location,
+          location: cleanLocation,
           type: unit.type,
           priceFrom: unit.price || 0,
           image: unit.image,
