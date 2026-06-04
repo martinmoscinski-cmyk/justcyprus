@@ -19,6 +19,13 @@ const normalizeProjectName = (text = "") => {
     .trim();
 };
 
+const normalizeLocation = (location = "") => {
+  return String(location || "")
+    .replace(/Pafos/g, "Paphos")
+    .replace(/\s+/g, " ")
+    .trim();
+};
+
 export default async function handler(req, res) {
   try {
     const [aristo, pafilia, domenica, luma, giovani] = await Promise.all([
@@ -57,7 +64,7 @@ const cleanLocation = normalizeLocation(unit.location);
           priceFrom: unit.price || 0,
           image: unit.image,
           images: [],
-          description: `${cleanProjectName} is a selected development in ${unit.location}. Contact us for current availability, layouts and details.`,
+          description: `${cleanProjectName} is a selected development in ${cleanLocation}. Contact us for current availability, layouts and details.`,
           unitsCount: 0,
           units: [],
           developer: unit.developer,
