@@ -44,11 +44,20 @@ const extractPrice = (text = "") => {
 };
 
 const extractCity = (html, text, url = "") => {
-  const cityMatch = text.match(/City:\s*([A-Za-z\s-]+)\s+Zip:/i);
+  const addressMatch =
+    text.match(/City:\s*([A-Za-z\s-]+)\s*,\s*([A-Za-z\s-]+)\s+Country:/i) ||
+    text.match(/City:\s*([A-Za-z\s-]+)\s*,\s*([A-Za-z\s-]+)/i);
 
-  if (cityMatch?.[1]) {
-    const city = normalizeText(cityMatch[1]).trim();
-    return city || "Famagusta";
+  if (addressMatch?.[2]) {
+    return normalizeText(addressMatch[2]).trim();
+  }
+
+  if (addressMatch?.[1]) {
+    const city = normalizeText(addressMatch[1]).trim();
+
+    if (city.toLowerCase() !== "famagusta") {
+      return city;
+    }
   }
 
   const lowerUrl = url.toLowerCase();
@@ -63,7 +72,7 @@ const extractCity = (html, text, url = "") => {
   if (lowerUrl.includes("sotira")) return "Sotira";
   if (lowerUrl.includes("paralimni")) return "Paralimni";
 
-  return "Famagusta";
+  return "";
 };
 
 const extractTitle = (html, text) => {
