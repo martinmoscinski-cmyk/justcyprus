@@ -53,13 +53,12 @@ const extractCity = (html, text, url = "") => {
       .map((part) => normalizeText(part).trim())
       .filter(Boolean);
 
-    const actualCity = parts[parts.length - 1];
+    if (parts.length > 1) {
+      return parts[parts.length - 1];
+    }
 
-    if (
-      actualCity &&
-      actualCity.toLowerCase() !== "famagusta"
-    ) {
-      return actualCity;
+    if (parts.length === 1) {
+      return parts[0];
     }
   }
 
