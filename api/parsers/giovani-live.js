@@ -229,6 +229,15 @@ export async function getGiovaniProjects() {
         if (!html) return null;
 
         const text = cleanText(html);
+if (
+  link.includes("euphoria") ||
+  link.includes("angelico") ||
+  link.includes("apanema") ||
+  link.includes("semeli")
+) {
+  console.log("DEBUG URL:", link);
+  console.log(text.slice(0, 5000));
+}
 
         const location = extractCity(html, text, link);
         const title = extractTitle(html, text);
