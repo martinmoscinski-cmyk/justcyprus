@@ -9,15 +9,16 @@ export default async function handler(req, res) {
   try {
     const data = await getGiovaniProjects();
 
-    const blob = await put(
-      "data/giovani-data.json",
-      JSON.stringify(data, null, 2),
-      {
-        access: "public",
-        contentType: "application/json",
-        addRandomSuffix: false
-      }
-    );
+ const blob = await put(
+  "data/giovani-data.json",
+  JSON.stringify(data, null, 2),
+  {
+    access: "public",
+    contentType: "application/json",
+    allowOverwrite: true,
+    addRandomSuffix: false
+  }
+);
 
     res.status(200).json({
       success: true,
