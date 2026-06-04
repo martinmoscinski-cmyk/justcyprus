@@ -174,7 +174,88 @@ function renderProjects(projects, page = 1) {
     });
   }
 }
+function sortProjects(projects, sortValue) {
+  if (sortValue === "price-low") {
+    projects.sort((a, b) => a.priceFrom - b.priceFrom);
+  }
 
+  if (sortValue === "price-high") {
+    projects.sort((a, b) => b.priceFrom - a.priceFrom);
+  }
+
+  if (sortValue === "name") {
+    projects.sort((a, b) =>
+      cleanText(a.title).localeCompare(cleanText(b.title))
+    );
+  }
+
+  return projects;
+}
+
+function applyFilters(projects) {
+  const location = normalizeLocation(
+    document.getElementById("location").value
+  );
+
+  const type = document.getElementById("type").value.toLowerCase();
+  const budgetValue = document.getElementById("budget").value;
+  const sortValue = document.getElementById("sort").value;
+
+  const results = document.getElementById("results");
+  const pagination = document.getElementById("pagination");
+  const resultsCount = document.getElementById("resultsCount");
+
+  results.innerHTML = "";
+  if (pagination) pagination.innerHTML = "";
+
+  const matched = projects.filter((project) => {
+    const projectLocation = normalizeLocation(project.location);
+    const projectType = cleanText(project.type).toLowerCase();
+    const projectPrice = Number(project.priceFrom || 0);
+
+    if (!projectPrice) return false;
+
+    const locationMatch =
+      !location ||
+      projectLocation.includes(location);
+
+    const typeMatch =
+      !type ||
+      projectType.includes(type);
+
+    let matchesBudget = true;
+
+    if (budgetValue) {
+      const [minBudget, maxBudget] =
+        budgetValue.split("-").map(Number);
+
+      matchesBudget =
+        projectPrice >= minBudget &&
+        projectPrice <= maxBudget;
+    }
+
+    return locationMatch && typeMatch && matchesBudget;
+  });
+
+  sortProjects(matched, sortValue);
+
+  if (matched.length === 0) {
+    if (resultsCount) {
+      resultsCount.innerText = "0 projects found";
+    }
+
+    results.innerHTML = `<p>No matching projects found.</p>`;
+    return;
+  }
+
+  if (resultsCount) {
+    resultsCount.innerText = `${matched.length} projects found`;
+  }
+
+  currentMatched = matched;
+  currentPage = 1;
+  renderProjects(currentMatched, currentPage);
+}
 document.addEventListener("DOMContentLoaded", async () => {
   const form = document.getElementById("propertySearch");
 
@@ -185,23 +266,31 @@ document.addEventListener("DOMContentLoaded", async () => {
   const locationSelect = document.getElementById("location");
 
   if (locationSelect) {
-    const locations = [
-      ...new Set(
-        projects
-          .map((project) =>
-            normalizeLocationForDropdown(project.location)
-          )
-          .filter(Boolean)
-      )
-    ].sort();
+    const locationCounts = {};
+
+    projects.forEach((project) => {
+      const location =
+        normalizeLocationForDropdown(project.location);
+
+      if (!location) return;
+
+      locationCounts[location] =
+        (locationCounts[location] || 0) + 1;
+    });
+
+    const locations =
+      Object.keys(locationCounts).sort();
 
     locationSelect.innerHTML = `
-      <option value="">All locations</option>
+      <option value="">
+        All locations (${projects.length})
+      </option>
+
       ${locations
         .map((location) => {
           return `
             <option value="${location}">
-              ${location}
+              ${location} (${locationCounts[location]})
             </option>
           `;
         })
@@ -209,115 +298,30 @@ document.addEventListener("DOMContentLoaded", async () => {
     `;
   }
 
-  form.addEventListener("submit", async (e) => {
+  form.addEventListener("submit", (e) => {
     e.preventDefault();
+    applyFilters(projects);
+  });
 
-    const location = normalizeLocation(
-      document.getElementById("location").value
-    );
+  ["location", "type", "budget", "sort"].forEach((id) => {
+  const field = document.getElementById(id);
 
-    const type = document.getElementById("type").value.toLowerCase();
-    const budgetValue = document.getElementById("budget").value;
-    const sortValue = document.getElementById("sort").value;
+  if (!field) return;
 
-    const results = document.getElementById("results");
-    const pagination = document.getElementById("pagination");
-
-    results.innerHTML = "";
-    if (pagination) pagination.innerHTML = "";
-
-    const matched = projects.filter((project) => {
-      const projectLocation = normalizeLocation(project.location);
-      const projectType = cleanText(project.type).toLowerCase();
-      const projectPrice = Number(project.priceFrom || 0);
-
-      if (!projectPrice) {
-        return false;
-      }
-
-      const locationMatch =
-        !location ||
-        projectLocation.includes(location);
-
-      const typeMatch =
-        !type ||
-        projectType.includes(type);
-
-      let matchesBudget = true;
-
-      if (budgetValue) {
-        const [minBudget, maxBudget] =
-          budgetValue.split("-").map(Number);
-
-        matchesBudget =
-          projectPrice >= minBudget &&
-          projectPrice <= maxBudget;
-      }
-
-      return (
-        locationMatch &&
-        typeMatch &&
-        matchesBudget
-      );
-    });
-
-    if (sortValue === "price-low") {
-      matched.sort((a, b) => a.priceFrom - b.priceFrom);
-    }
-
-    if (sortValue === "price-high") {
-      matched.sort((a, b) => b.priceFrom - a.priceFrom);
-    }
-
-    if (sortValue === "name") {
-      matched.sort((a, b) =>
-        cleanText(a.title).localeCompare(
-          cleanText(b.title)
-        )
-      );
-    }
-
-    const resultsCount = document.getElementById("resultsCount");
-
-    if (matched.length === 0) {
-      if (resultsCount) {
-        resultsCount.innerText = "0 projects found";
-      }
-
-      results.innerHTML = `<p>No matching projects found.</p>`;
-      return;
-    }
-
-    if (resultsCount) {
-      resultsCount.innerText = `${matched.length} projects found`;
-    }
-
-    currentMatched = matched;
-    currentPage = 1;
-    renderProjects(currentMatched, currentPage);
+  field.addEventListener("change", () => {
+    applyFilters(projects);
   });
 });
 
-document.addEventListener("change", (e) => {
-  if (e.target.id !== "sort") return;
-  if (!currentMatched.length) return;
+currentMatched = projects;
+renderProjects(projects, 1);
 
-  const sortValue = e.target.value;
+const resultsCount =
+  document.getElementById("resultsCount");
 
-  if (sortValue === "price-low") {
-    currentMatched.sort((a, b) => a.priceFrom - b.priceFrom);
-  }
+if (resultsCount) {
+  resultsCount.innerText =
+    `${projects.length} projects found`;
+}
 
-  if (sortValue === "price-high") {
-    currentMatched.sort((a, b) => b.priceFrom - a.priceFrom);
-  }
-
-  if (sortValue === "name") {
-    currentMatched.sort((a, b) =>
-      cleanText(a.title).localeCompare(cleanText(b.title))
-    );
-  }
-
-  currentPage = 1;
-  renderProjects(currentMatched, currentPage);
 });
