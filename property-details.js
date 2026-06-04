@@ -52,7 +52,7 @@ async function loadProject() {
   document.getElementById("emailBtn").href =
     `mailto:marcin@nglobalinvestments.com?subject=Property enquiry ${project.ref}`;
 
-  const gallery = document.getElementById("gallery");
+    const gallery = document.getElementById("gallery");
 
   gallery.innerHTML =
     (project.images || [])
@@ -62,6 +62,7 @@ async function loadProject() {
             src="${img}"
             alt="${project.title}"
             loading="lazy"
+            onclick="document.getElementById('heroImage').src='${img}'"
           >
         `
       )
