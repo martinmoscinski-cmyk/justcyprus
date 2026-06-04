@@ -1,30 +1,39 @@
 <body>
 
   <main class="property-page">
+
     <a href="/" class="back-link">← Back to properties</a>
 
     <section class="property-hero">
       <img id="heroImage" src="images/property-1.jpg" alt="">
-    </section>
-
-    <section class="property-details">
-      <p id="location"></p>
-      <h1 id="title">Loading...</h1>
-      <h2 id="price"></h2>
-      <p id="description"></p>
-
-      <div id="meta"></div>
-
-      <div class="card-actions">
-        <a id="whatsappBtn" class="card-btn">WhatsApp</a>
-        <a id="emailBtn" class="card-btn secondary-card-btn">Request details</a>
+      <div class="property-hero-overlay">
+        <p id="location"></p>
+        <h1 id="title">Loading...</h1>
+        <h2 id="price"></h2>
       </div>
     </section>
 
-    <section>
-      <h2>Gallery</h2>
-      <div id="gallery"></div>
+    <section class="property-content">
+
+      <div class="property-main">
+        <h2>About this project</h2>
+        <p id="description"></p>
+
+        <h2>Gallery</h2>
+        <div id="gallery" class="property-gallery"></div>
+      </div>
+
+      <aside class="property-sidebar">
+        <div id="meta" class="property-info-box"></div>
+
+        <div class="property-cta-box">
+          <a id="whatsappBtn" class="card-btn">WhatsApp</a>
+          <a id="emailBtn" class="card-btn secondary-card-btn">Request details</a>
+        </div>
+      </aside>
+
     </section>
+
   </main>
 
   <script src="property-details.js"></script>

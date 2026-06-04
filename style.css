@@ -1248,3 +1248,157 @@ nav a:hover{
   grid-template-columns:repeat(auto-fit,minmax(340px,1fr));
   gap:34px;
 }
+.property-page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 20px;
+  text-decoration: none;
+  font-weight: 600;
+  color: #111;
+}
+
+.property-hero {
+  position: relative;
+  height: 520px;
+  border-radius: 28px;
+  overflow: hidden;
+  margin-bottom: 34px;
+  background: #eee;
+}
+
+.property-hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.property-hero-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 44px;
+  color: #fff;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.72),
+    rgba(0, 0, 0, 0)
+  );
+}
+
+.property-hero-overlay p {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.property-hero-overlay h1 {
+  margin: 0;
+  font-size: 48px;
+  line-height: 1.05;
+}
+
+.property-hero-overlay h2 {
+  margin: 14px 0 0;
+  font-size: 28px;
+}
+
+.property-content {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 34px;
+  align-items: start;
+}
+
+.property-main {
+  background: #fff;
+  border-radius: 24px;
+  padding: 30px;
+}
+
+.property-main h2 {
+  margin-top: 0;
+}
+
+.property-main p {
+  line-height: 1.7;
+  color: #444;
+}
+
+.property-sidebar {
+  position: sticky;
+  top: 24px;
+}
+
+.property-info-box,
+.property-cta-box {
+  background: #fff;
+  border-radius: 24px;
+  padding: 24px;
+  margin-bottom: 18px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+}
+
+.property-info-box p {
+  margin: 0 0 12px;
+}
+
+.property-cta-box .card-btn {
+  display: block;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.property-gallery {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.property-gallery img {
+  width: 100%;
+  height: 240px;
+  object-fit: cover;
+  border-radius: 18px;
+}
+
+@media (max-width: 800px) {
+  .property-page {
+    padding: 14px;
+  }
+
+  .property-hero {
+    height: 380px;
+    border-radius: 20px;
+  }
+
+  .property-hero-overlay {
+    padding: 24px;
+  }
+
+  .property-hero-overlay h1 {
+    font-size: 34px;
+  }
+
+  .property-content {
+    grid-template-columns: 1fr;
+  }
+
+  .property-sidebar {
+    position: static;
+  }
+
+  .property-gallery {
+    grid-template-columns: 1fr;
+  }
+
+  .property-gallery img {
+    height: 260px;
+  }
+}
