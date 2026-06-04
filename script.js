@@ -79,6 +79,8 @@ function renderProjects(projects, page = 1) {
     const ref = cleanText(project.ref || "JC-PROJECT");
     const description = shortDescription(project.description);
     const priceText = makePrice(project.priceFrom);
+const projectUrl =
+  `/property.html?id=${encodeURIComponent(project.projectId)}`;
 
     const image =
       project.image ||
@@ -94,7 +96,11 @@ function renderProjects(projects, page = 1) {
     );
 
     results.innerHTML += `
-      <div class="property-card">
+  <div
+    class="property-card"
+    onclick="window.location.href='${projectUrl}'"
+    style="cursor:pointer;"
+  >
 
         <div class="property-badge">
           Ref: ${ref}
@@ -131,16 +137,18 @@ function renderProjects(projects, page = 1) {
             <div class="card-actions">
 
               <a
-                href="https://wa.me/447459899618?text=${whatsappMessage}"
-                class="card-btn"
-              >
+  href="https://wa.me/447459899618?text=${whatsappMessage}"
+  class="card-btn"
+  onclick="event.stopPropagation();"
+>
                 WhatsApp
               </a>
 
-              <a
-                href="mailto:marcin@nglobalinvestments.com?subject=Property enquiry ${ref}&body=${emailBody}"
-                class="card-btn secondary-card-btn"
-              >
+              <<a
+  href="mailto:marcin@nglobalinvestments.com?subject=Property enquiry ${ref}&body=${emailBody}"
+  class="card-btn secondary-card-btn"
+  onclick="event.stopPropagation();"
+>
                 Request details
               </a>
 
