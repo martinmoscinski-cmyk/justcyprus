@@ -44,16 +44,28 @@ const extractPrice = (text = "") => {
 };
 
 const extractCity = (html, text, url = "") => {
-  const addressMatch =
+  const cityLine =
     text.match(/City:\s*([A-Za-z\s-]+)\s*,\s*([A-Za-z\s-]+)\s+Country:/i) ||
     text.match(/City:\s*([A-Za-z\s-]+)\s*,\s*([A-Za-z\s-]+)/i);
 
-  if (addressMatch?.[2]) {
-    return normalizeText(addressMatch[2]).trim();
+  if (cityLine?.[2]) {
+    return normalizeText(cityLine[2]).trim();
   }
 
-  if (addressMatch?.[1]) {
-    const city = normalizeText(addressMatch[1]).trim();
+  if (cityLine?.[1]) {
+    const city = normalizeText(cityLine[1]).trim();
+
+    if (city.toLowerCase() !== "famagusta") {
+      return city;
+    }
+  }
+
+  const simpleCity =
+    text.match(/City:\s*([A-Za-z\s-]+)\s+Country:/i) ||
+    text.match(/City:\s*([A-Za-z\s-]+)\s+Zip:/i);
+
+  if (simpleCity?.[1]) {
+    const city = normalizeText(simpleCity[1]).trim();
 
     if (city.toLowerCase() !== "famagusta") {
       return city;
@@ -74,7 +86,6 @@ const extractCity = (html, text, url = "") => {
 
   return "";
 };
-
 const extractTitle = (html, text) => {
   const h1 =
     html.match(/<h1[^>]*>(.*?)<\/h1>/i)?.[1] ||
