@@ -1,3 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Property Details</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/style.css">
+</head>
+
 <body>
 
   <main class="property-page">
@@ -6,36 +21,35 @@
 
     <section class="property-hero">
       <img id="heroImage" src="images/property-1.jpg" alt="">
-      <div class="property-hero-overlay">
-        <p id="location"></p>
-        <h1 id="title">Loading...</h1>
-        <h2 id="price"></h2>
-      </div>
     </section>
 
-    <section class="property-content">
+    <section class="property-header">
+      <p id="location"></p>
+      <h1 id="title">Loading...</h1>
+      <h2 id="price"></h2>
 
-      <div class="property-main">
-        <h2>About this project</h2>
-        <p id="description"></p>
-
-        <h2>Gallery</h2>
-        <div id="gallery" class="property-gallery"></div>
+      <div class="property-actions">
+        <a id="whatsappBtn" class="card-btn">WhatsApp</a>
+        <a id="emailBtn" class="card-btn secondary-card-btn">Request details</a>
       </div>
 
-      <aside class="property-sidebar">
-        <div id="meta" class="property-info-box"></div>
+      <div id="meta" class="property-meta-box"></div>
+    </section>
 
-        <div class="property-cta-box">
-          <a id="whatsappBtn" class="card-btn">WhatsApp</a>
-          <a id="emailBtn" class="card-btn secondary-card-btn">Request details</a>
-        </div>
-      </aside>
+    <section class="property-section">
+      <h2>About this project</h2>
+      <p id="description"></p>
+    </section>
 
+    <section class="property-section">
+      <h2>Gallery</h2>
+      <div id="gallery" class="property-gallery"></div>
     </section>
 
   </main>
 
-  <script src="property-details.js"></script>
+  <script src="/property-details.js"></script>
 
 </body>
+
+</html>
