@@ -100,6 +100,29 @@ const extractImage = (html) => {
 
   return fallbackImage;
 };
+const extractImages = (html) => {
+  const images = [];
+
+  const matches = [
+    ...html.matchAll(
+      /https?:\/\/[^"'\s]+\.(jpg|jpeg|png|webp)/gi
+    )
+  ];
+
+  matches.forEach(match => {
+    const url = match[0];
+
+    if (
+      url.includes("wp-content/uploads") &&
+      !url.includes("logo") &&
+      !images.includes(url)
+    ) {
+      images.push(url);
+    }
+  });
+
+  return images.slice(0, 20);
+};
 
 const fetchHtml = async (url) => {
   const response = await fetch(url, {
@@ -244,27 +267,43 @@ if (
         else if (lower.includes("penthouse")) type = "Penthouse";
         else if (lower.includes("office")) type = "Office";
 
-        const originalImage = extractImage(html);
+        const originalImages = extractImages(html);
 
-        const image = await getBlobImage(
-          originalImage,
-          `${title}-${location}`
-        );
+const images = await Promise.all(
+  (originalImages.length
+    ? originalImages
+    : [extractImage(html)]
+  ).map((img, idx) =>
+    getBlobImage(
+      img,
+      `${title}-${location}-${idx}`
+    )
+  )
+);
 
-        return {
-          unitRef: `GIO-${index + 1}`,
-          projectName: title,
-          unitTitle: title,
-          location,
-          type,
-          price,
-          image,
-          images: [image],
-          description: `${title} is a selected Giovani development in ${location}. Contact us for current availability, layouts and details.`,
-          bedrooms: "",
-          developer: "Giovani",
-          source: link
-        };
+const image = images[0] || fallbackImage;
+
+console.log(
+  title,
+  location,
+  "IMAGES:",
+  images.length
+);
+
+return {
+  unitRef: `GIO-${index + 1}`,
+  projectName: title,
+  unitTitle: title,
+  location,
+  type,
+  price,
+  image,
+  images,
+  description: `${title} is a selected Giovani development in ${location}. Contact us for current availability, layouts and details.`,
+  bedrooms: "",
+  developer: "Giovani",
+  source: link
+};
       } catch {
         return null;
       }
