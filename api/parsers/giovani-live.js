@@ -8,7 +8,7 @@ import {
 
 const BASE_URL = "https://giovani.cy";
 const MAX_PAGES = 20;
-const CONCURRENCY = 6;
+const CONCURRENCY = 2;
 
 const absoluteUrl = (url = "") => {
   if (!url) return "";
@@ -121,7 +121,7 @@ const extractImages = (html) => {
     }
   });
 
-  return images.slice(0, 20);
+  return images.slice(0, 10);
 };
 
 const fetchHtml = async (url) => {
@@ -267,21 +267,18 @@ if (
         else if (lower.includes("penthouse")) type = "Penthouse";
         else if (lower.includes("office")) type = "Office";
 
-        const originalImages = extractImages(html);
+        const originalImage = extractImage(html);
 
-const images = await Promise.all(
-  (originalImages.length
-    ? originalImages
-    : [extractImage(html)]
-  ).map((img, idx) =>
-    getBlobImage(
-      img,
-      `${title}-${location}-${idx}`
-    )
-  )
+const image = await getBlobImage(
+  originalImage,
+  `${title}-${location}`
 );
 
-const image = images[0] || fallbackImage;
+const images = extractImages(html);
+
+if (!images.includes(originalImage)) {
+  images.unshift(originalImage);
+}
 
 console.log(
   title,
