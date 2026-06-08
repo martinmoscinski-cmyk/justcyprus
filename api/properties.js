@@ -63,7 +63,11 @@ const cleanLocation = normalizeLocation(unit.location);
           type: unit.type,
           priceFrom: unit.price || 0,
           image: unit.image,
-          images: [],
+          images: unit.images?.length
+  ? [...unit.images]
+  : unit.image
+    ? [unit.image]
+    : [],
           description: `${cleanProjectName} is a selected development in ${cleanLocation}. Contact us for current availability, layouts and details.`,
           unitsCount: 0,
           units: [],
